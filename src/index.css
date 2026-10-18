@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0b1020;
+  --surface: #151b3b;
+  --accent: #ffb02e;
+  --aurora: #2dd4bf;
+  --coral: #ff6b6b;
+  --text: #f6f1e7;
+  --muted: #9aa3c7;
+  --border: rgba(246, 241, 231, 0.12);
+  --card: rgba(21, 27, 59, 0.72);
+  --ring: #ffb02e;
+}
+
+.light {
+  --bg: #f6f1e7;
+  --surface: #efe6d4;
+  --accent: #c48412;
+  --aurora: #0f9d8e;
+  --coral: #d94a4a;
+  --text: #151b3b;
+  --muted: #4a5278;
+  --border: rgba(21, 27, 59, 0.12);
+  --card: rgba(255, 252, 246, 0.82);
+  --ring: #c48412;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: Fraunces, Georgia, serif;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+
+.glass {
+  background: var(--card);
+  backdrop-filter: blur(18px);
+  border: 1px solid var(--border);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--aurora) 18%, transparent), 0 18px 40px rgba(0, 0, 0, 0.22);
+}
+
+.grain::before {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  background-image: var(--tw-gradient-stops),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.08'/%3E%3C/svg%3E");
+  border-radius: inherit;
+}
+
+.boarding-pass {
+  background:
+    radial-gradient(circle at 0 50%, transparent 10px, var(--surface) 10.5px) left / 14px 100% no-repeat,
+    radial-gradient(circle at 100% 50%, transparent 10px, var(--surface) 10.5px) right / 14px 100% no-repeat,
+    var(--surface);
+}
+
+.barcode {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--text) 0 2px,
+    transparent 2px 5px,
+    var(--text) 5px 6px,
+    transparent 6px 9px
+  );
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+    color: #111;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
