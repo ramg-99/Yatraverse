@@ -10,4 +10,5 @@ server/.env
 *.db
 *.db-journal
 *.sqlite
-prompts/JUDGES_QA_PROMPT.md
+prompts/
+*.prompt.md

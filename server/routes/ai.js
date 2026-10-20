@@ -33,7 +33,7 @@ router.post('/generate', auth, async (req, res, next) => {
       const userPrompt = prompt || `Plan a ${duration}-day trip to ${destination} for ${travelers} travelers with budget ₹${budget}. Interests: ${(interests || []).join(', ')}. Provide a detailed day-by-day itinerary with costs.`;
 
       const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -75,7 +75,7 @@ router.post('/chat', auth, async (req, res, next) => {
     if (GEMINI_KEY) {
       const systemPrompt = `You are a helpful travel planning assistant for the app Yatraverse. The user is planning: "${tripName || 'a trip'}". Answer concisely and helpfully.`;
       const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
