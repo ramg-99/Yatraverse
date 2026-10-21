@@ -1,4 +1,4 @@
-# 🌍 Yatraverse (GlobeTrotter) — Personalised Travel Planning Universe
+# 🌍 Yatraverse — Personalised Travel Planning Universe
 
 > An intelligent, full-stack travel planning platform built with React 18, Vite, Tailwind CSS, Express.js, Prisma, and Gemini AI.
 

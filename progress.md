@@ -1,11 +1,11 @@
-# Yatraverse (GlobeTrotter) - Project Progress & Master Handover
+# Yatraverse - Project Progress & Master Handover
 
-> **Purpose of this document**: This file tracks the exact progress, architecture, setup instructions, and roadmap for the GlobeTrotter travel planning web application. If context limits are reached or switching AI sessions, any agent can read this file to immediately resume work without any loss of state or knowledge.
+> **Purpose of this document**: This file tracks the exact progress, architecture, setup instructions, and roadmap for the Yatraverse travel planning web application. If context limits are reached or switching AI sessions, any agent can read this file to immediately resume work without any loss of state or knowledge.
 
 ---
 
 ## 1. Project Overview & Vision
-- **Project Name**: Yatraverse / GlobeTrotter
+- **Project Name**: Yatraverse
 - **Goal**: Full-stack personalized travel planning platform supporting multi-city itineraries, day-wise timeline scheduling, activity search, dynamic budget analytics, AI-powered generation & optimization, public itinerary sharing with cloning, user profile settings, and an admin analytics dashboard.
 - **Relational Data Model**: Users, Trips, Stops, Cities, Activities, StopActivities, Expenses, SavedDestinations, Collaborators.
 
@@ -44,7 +44,8 @@
 | **F14** | **AI Travel Assistant** | Natural language prompt -> auto-generated multi-city itinerary |  DONE | `AIAssistantPage.jsx` with streaming simulation & clone to trip |
 | **F15** | **AI Itinerary Optimization** | Analyze existing trip, suggest geo, budget, pacing improvements with "Apply" |  DONE | `TripOptimizerModal.jsx` integrated into Trip Builder |
 | **F16** | **Conversational Trip Assistant** | Chat dock with contextual trip awareness |  DONE | `ChatDock.jsx` floating widget |
-| **F17** | **Relational Database & Express API** | Real relational DB tables + Express CRUD REST API |  DONE | Express API + Prisma + SQLite seeded with 15 cities, 26 activities, accounts |
+| **F17** | **Relational Database & Express API** | Real relational DB tables + Express CRUD REST API |  DONE | Express API + Prisma + SQLite seeded with 16 cities, 26 activities, accounts |
+| **F18** | **Full API Connectivity & Hybrid Client** | src/lib/api.js client with normalizer, JWT auth, and hybrid fallback |  DONE | Connected auth, trips, catalog, admin, and AI services |
 
 ---
 

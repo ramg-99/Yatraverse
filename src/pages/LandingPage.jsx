@@ -31,6 +31,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button.jsx';
 import { ConstellationBg } from '@/components/layout/ConstellationBg.jsx';
 import { BoardingPassCard } from '@/components/trip/BoardingPassCard.jsx';
+import { useAuthStore } from '@/store/useAuthStore.js';
 import { trips } from '@/data/trips.js';
 import { cities } from '@/data/cities.js';
 
@@ -128,6 +129,7 @@ const FAQS = [
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const loginDemoTraveller = useAuthStore((s) => s.loginDemoTraveller);
   const [activeTab, setActiveTab] = useState('multi');
   const [selectedDemoTripIndex, setSelectedDemoTripIndex] = useState(0);
   const [filterRegion, setFilterRegion] = useState('All');
@@ -241,11 +243,17 @@ export default function LandingPage() {
                 Sign In
               </Button>
             </Link>
-            <Link to="/login">
-              <Button variant="outline" size="sm" className="border-saffron/40 text-saffron hover:bg-saffron/10">
-                Demo Traveller
-              </Button>
-            </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                loginDemoTraveller();
+                navigate('/dashboard');
+              }}
+              className="border-saffron/40 text-saffron hover:bg-saffron/10"
+            >
+              Demo Traveller
+            </Button>
             <Link to="/signup">
               <Button size="sm" className="bg-saffron text-ink font-semibold shadow-glow hover:bg-saffron/90">
                 Stamp Passport
@@ -284,11 +292,17 @@ export default function LandingPage() {
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              <Link to="/login">
-                <Button size="lg" variant="outline" className="border-white/20 bg-surface/40 hover:bg-surface">
-                  Judge Quick Demo
-                </Button>
-              </Link>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => {
+                  loginDemoTraveller();
+                  navigate('/dashboard');
+                }}
+                className="border-white/20 bg-surface/40 hover:bg-surface text-saffron hover:text-saffron"
+              >
+                Demo Traveller (1-Click)
+              </Button>
             </div>
 
             {/* Social Trust Metrics */}
@@ -785,21 +799,22 @@ export default function LandingPage() {
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
             <div className="rounded-xl border border-white/10 bg-ink/80 px-4 py-2 font-mono text-xs text-parchment">
-              User: <span className="text-saffron">demo@yatraverse.app</span> / Pass:{' '}
+              Demo Traveller: <span className="text-saffron">demo@yatraverse.app</span> / Pass:{' '}
               <span className="text-saffron">demo1234</span>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-ink/80 px-4 py-2 font-mono text-xs text-parchment">
-              Admin: <span className="text-aurora">admin@yatraverse.app</span> / Pass:{' '}
-              <span className="text-aurora">admin1234</span>
             </div>
           </div>
 
           <div className="mt-6 flex justify-center gap-3">
-            <Link to="/login">
-              <Button size="lg" className="bg-saffron text-ink font-bold shadow-glow hover:bg-saffron/90">
-                Launch Demo Login Now
-              </Button>
-            </Link>
+            <Button
+              size="lg"
+              onClick={() => {
+                loginDemoTraveller();
+                navigate('/dashboard');
+              }}
+              className="bg-saffron text-ink font-bold shadow-glow hover:bg-saffron/90"
+            >
+              Launch Demo Traveller Now
+            </Button>
           </div>
         </div>
       </section>
@@ -939,7 +954,7 @@ export default function LandingPage() {
                 </li>
                 <li>
                   <Link to="/login" className="hover:text-parchment transition-colors">
-                    Astra AI Travel Companion
+                    Yatra AI Travel Companion
                   </Link>
                 </li>
               </ul>

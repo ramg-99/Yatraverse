@@ -1,11 +1,10 @@
 import { cities } from '@/data/cities.js';
-import { useWorldStore } from '@/store/useWorldStore.js';
-import { uid } from '@/lib/utils.js';
+import { apiRequest, isBackendAvailable } from '@/lib/api.js';
 
-async function* typewrite(text, chunk = 18) {
+async function* typewrite(text, chunk = 16) {
   for (let i = 0; i < text.length; i += chunk) {
     yield text.slice(i, i + chunk);
-    await new Promise((r) => setTimeout(r, 28));
+    await new Promise((r) => setTimeout(r, 20));
   }
 }
 
@@ -33,107 +32,124 @@ export const MockAIProvider = {
     const picks = pickCities(input.budget, input.interests || []);
     const lines = [
       `Planning your universe around ${input.destination || picks.map((c) => c.name).join(', ')}.`,
-      ` ${days} days · ₹${(input.budget || 200000).toLocaleString()} · ${input.travelers || 2} travellers.`,
-      `\n\nConstellation: ${picks.map((c) => c.iata).join(' → ')}`,
-      ...picks.map(
-        (c, i) =>
-          `\n\nDay ${i * 3 + 1}–${i * 3 + 3} · ${c.name}\n• ${c.name} Night market graze\n• ${c.name} Iconic lookout\n• ${c.name} Dawn trail`,
-      ),
-      `\n\nEstimated burn: ₹${Math.round((input.budget || 200000) * 0.82).toLocaleString()} (leave 18% as weather insurance).`,
+      ` ${days} days · ₹${(input.budget || 200000).toLocaleString()} budget cap for ${input.travelers || 2} travellers.`,
+      `\n\nDay 1–3: Arrive into ${picks[0]?.name}, unpack slowly. Evening street food walk near the historic quarter.`,
+      `\nDay 4–5: Travel to ${picks[1]?.name || picks[0]?.name}. Golden hour walk and local museum or market stroll.`,
+      `\nDay 6–${days}: Transition to ${picks[2]?.name || picks[0]?.name}. Unwind at sunset viewpoints and night markets.`,
+      `\n\nTip: Avoid midday transfer delays by taking early morning expresses.`,
     ];
     yield* typewrite(lines.join(''));
   },
-  /**
-   * @param {import('@/data/schema.js').Trip} trip
-   * @returns {Promise<object[]>}
-   */
+
   async optimizeTrip(trip) {
-    await new Promise((r) => setTimeout(r, 600));
-    const w = useWorldStore.getState();
-    const tripStops = w.stops.filter((s) => s.trip_id === trip.id).sort((a, b) => a.order_index - b.order_index);
-    const names = tripStops.map((s) => w.cities.find((c) => c.id === s.city_id)?.name);
     return [
       {
-        id: uid('opt'),
+        id: 'opt1',
         kind: 'cost',
-        title: 'Trim stay spend 15%',
-        detail: 'Swap two 5-star nights for boutique riads / business hotels. Same neighbourhoods.',
-        before: 'Stay heavy',
-        after: 'Boutique mix',
-        health: 8,
+        title: 'Trim stay tier by 1 notch',
+        detail: 'Switching 2 nights from luxury to boutique frees ~₹14,000 for dining.',
       },
       {
-        id: uid('opt'),
+        id: 'opt2',
         kind: 'geo',
-        title: 'Reorder by geography',
-        detail: `Fly ${names.join(' → ')} as a tighter arc to cut backtracking.`,
-        before: names.join(' → '),
-        after: [...names].reverse().join(' → '),
-        health: 12,
+        title: 'Eliminate zig-zag in route',
+        detail: 'Reverse stop order to reduce travel time by ~3.5 hours.',
       },
       {
-        id: uid('opt'),
+        id: 'opt3',
         kind: 'pace',
-        title: 'Balance busy days',
-        detail: 'Move one nightlife block so no day holds more than two high-energy activities.',
-        before: 'Stacked night + dawn',
-        after: 'Dawn rest, night later',
-        health: 10,
+        title: 'Add a buffer afternoon',
+        detail: 'Day 4 has 4 activities back-to-back. Space them out for breath.',
       },
       {
-        id: uid('opt'),
+        id: 'opt4',
         kind: 'swap',
-        title: 'Swap by persona',
-        detail: 'Replace a generic lookout with a market graze — better fit for a Midnight Foodie.',
-        before: 'Iconic lookout',
-        after: 'Night market graze',
-        health: 7,
+        title: 'Local secret swap',
+        detail: 'Replace crowded viewpoint with rooftop tea pavilion at dusk.',
       },
     ];
   },
-  /**
-   * @param {import('@/data/schema.js').ChatMessage[]} messages
-   * @param {{ trip?: object }} context
-   */
+
   async *chat(messages, context) {
-    const last = messages[messages.length - 1]?.content || '';
-    const tripName = context?.trip?.name || 'your open atlas';
-    const reply = last.toLowerCase().includes('food')
-      ? `For ${tripName}, chase steam: night markets first, chef’s lunch on the quieter day, and keep one meal unplanned so the city can surprise you.`
-      : last.toLowerCase().includes('budget')
-        ? `${tripName} looks tight if stays stay five-star. Cap lodging at 40% and you still keep the aurora nights.`
-        : `Reading ${tripName}. I can sketch a day, swap an activity, or pack a bag for the weather strip. Try “add a food stop” or “lighten day 2”.`;
+    const last = (messages[messages.length - 1]?.content || '').toLowerCase();
+    const trip = context?.trip;
+    const reply = last.includes('food')
+      ? `For ${trip?.name || 'this trip'}, chase local night markets first. Skip the tourist strip restaurants.`
+      : last.includes('budget')
+      ? `You have healthy headroom. Keep 15% in reserve for spontaneous rail hops.`
+      : `I've mapped the constellation for ${trip?.name || 'your journey'}. What shall we tweak next?`;
     yield* typewrite(reply);
   },
 };
 
-export const LLMProvider = {
+/**
+ * Hybrid AI Provider that calls the Express API backend,
+ * streaming the response via typewriter generator.
+ */
+export const HybridAIProvider = {
   async *generateItinerary(input) {
-    const key = import.meta.env.VITE_AI_API_KEY;
-    if (!key) {
-      yield* MockAIProvider.generateItinerary(input);
-      return;
+    const online = await isBackendAvailable();
+    if (online) {
+      try {
+        const res = await apiRequest('/ai/generate', {
+          method: 'POST',
+          body: JSON.stringify(input),
+        });
+        if (res?.text) {
+          yield* typewrite(res.text);
+          return;
+        }
+      } catch {
+        // Fall back to MockAIProvider
+      }
     }
-    yield 'LLMProvider is stubbed. Set a real endpoint to stream model tokens.';
+    yield* MockAIProvider.generateItinerary(input);
   },
+
   async optimizeTrip(trip) {
-    const key = import.meta.env.VITE_AI_API_KEY;
-    if (!key) return MockAIProvider.optimizeTrip(trip);
+    const online = await isBackendAvailable();
+    if (online) {
+      try {
+        const suggestions = await apiRequest('/ai/optimize', {
+          method: 'POST',
+          body: JSON.stringify({ trip }),
+        });
+        if (Array.isArray(suggestions) && suggestions.length > 0) {
+          return suggestions;
+        }
+      } catch {
+        // Fall back
+      }
+    }
     return MockAIProvider.optimizeTrip(trip);
   },
+
   async *chat(messages, context) {
-    const key = import.meta.env.VITE_AI_API_KEY;
-    if (!key) {
-      yield* MockAIProvider.chat(messages, context);
-      return;
+    const online = await isBackendAvailable();
+    if (online) {
+      try {
+        const res = await apiRequest('/ai/chat', {
+          method: 'POST',
+          body: JSON.stringify({
+            messages,
+            tripName: context?.trip?.name,
+          }),
+        });
+        if (res?.reply) {
+          yield* typewrite(res.reply);
+          return;
+        }
+      } catch {
+        // Fall back
+      }
     }
-    yield 'LLM chat stub — wire your vendor here.';
+    yield* MockAIProvider.chat(messages, context);
   },
 };
 
 /** @returns {import('@/data/schema.js').AIProvider} */
 export function getAI() {
-  return import.meta.env.VITE_AI_API_KEY ? LLMProvider : MockAIProvider;
+  return HybridAIProvider;
 }
 
 /** Mock weather by city id */
@@ -149,6 +165,12 @@ export function weatherFor(cityId) {
     c_jai: { label: 'Dry 27°', hint: 'Dust at dusk' },
     c_rak: { label: 'Warm 26°', hint: 'Medina shade' },
     c_cpt: { label: 'Wind 18°', hint: 'Cable car may pause' },
+    c_sin: { label: 'Thunder 30°', hint: 'Shelter in indoor gardens' },
+    c_par: { label: 'Mild 18°', hint: 'Ideal walking weather' },
+    c_bcn: { label: 'Sunny 24°', hint: 'Light jacket for evening sea' },
+    c_nyc: { label: 'Brisk 17°', hint: 'Avenue wind tunnels' },
+    c_dxb: { label: 'Hot 35°', hint: 'Stay indoors midday' },
+    c_syd: { label: 'Breezy 22°', hint: 'Ferry weather' },
   };
   return map[cityId] || { label: 'Fair 22°', hint: 'Good walking weather' };
 }

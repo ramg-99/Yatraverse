@@ -1,8 +1,19 @@
 import { simulate } from '@/lib/simulate.js';
 import { useWorldStore } from '@/store/useWorldStore.js';
+import { apiRequest, isBackendAvailable } from '@/lib/api.js';
 
 /** @returns {Promise<object>} */
-export function adminStats() {
+export async function adminStats() {
+  const online = await isBackendAvailable();
+  if (online) {
+    try {
+      const stats = await apiRequest('/admin/stats');
+      return stats;
+    } catch {
+      // fallback
+    }
+  }
+
   return simulate(() => {
     const { trips, users, stops, cities, activities } = useWorldStore.getState();
     const cityCounts = {};
@@ -16,7 +27,7 @@ export function adminStats() {
     return {
       users: users.length,
       trips: trips.length,
-      dau: 2,
+      dau: Math.min(users.length, 3),
       mau: users.length,
       avgLength: 11,
       topCities,
@@ -33,8 +44,32 @@ export function adminStats() {
   });
 }
 
+/** @returns {Promise<object[]>} */
+export async function adminUsers() {
+  const online = await isBackendAvailable();
+  if (online) {
+    try {
+      return await apiRequest('/admin/users');
+    } catch {
+      // fallback
+    }
+  }
+  return useWorldStore.getState().users;
+}
+
 /** @param {string} userId @param {boolean} suspended */
-export function setSuspended(userId, suspended) {
+export async function setSuspended(userId, suspended) {
+  const online = await isBackendAvailable();
+  if (online) {
+    try {
+      await apiRequest(`/admin/users/${userId}/suspend`, {
+        method: 'PUT',
+        body: JSON.stringify({ suspended }),
+      });
+    } catch {
+      // fallback
+    }
+  }
   return simulate(() => {
     const w = useWorldStore.getState();
     const user = w.users.find((u) => u.id === userId);
@@ -44,7 +79,15 @@ export function setSuspended(userId, suspended) {
 }
 
 /** @param {string} userId */
-export function deleteUser(userId) {
+export async function deleteUser(userId) {
+  const online = await isBackendAvailable();
+  if (online) {
+    try {
+      await apiRequest(`/admin/users/${userId}`, { method: 'DELETE' });
+    } catch {
+      // fallback
+    }
+  }
   return simulate(() => {
     const w = useWorldStore.getState();
     w.patch({ users: w.users.filter((u) => u.id !== userId) });
