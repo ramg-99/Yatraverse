@@ -22,6 +22,9 @@ import { onImgError } from '@/lib/image.js';
 import { money } from '@/lib/utils.js';
 import { Button } from '@/components/ui/button.jsx';
 import { pointsFor, spendFor } from '@/lib/tripView.js';
+import { TripPaceOverview } from '@/components/timeline/TripPaceOverview.jsx';
+import { PaceRebalanceModal } from '@/components/timeline/PaceRebalanceModal.jsx';
+import { calculateTripPaceOverview } from '@/lib/paceCalculator.js';
 
 const TripMap = lazy(() => import('@/components/map/TripMap.jsx').then((m) => ({ default: m.TripMap })));
 
@@ -34,6 +37,7 @@ export default function TripViewPage() {
   const trip = trips.find((t) => t.id === id) || trips[0];
 
   const [mode, setMode] = useState('list');
+  const [isPaceModalOpen, setIsPaceModalOpen] = useState(false);
   const stops = useMemo(
     () => (trip ? world.stops.filter((s) => s.trip_id === trip.id).sort((a, b) => a.order_index - b.order_index) : []),
     [trip, world.stops]
@@ -82,6 +86,11 @@ export default function TripViewPage() {
     () => (trip ? spendFor(trip.id) : { total: 0, byCat: {} }),
     [trip, stops, world.stopActivities, world.expenses]
   );
+
+  const paceOverview = useMemo(() => {
+    const rawDays = days.map((d) => d.iso);
+    return calculateTripPaceOverview(rawDays, stops, world.stopActivities, world.activities, world.cities);
+  }, [days, stops, world.stopActivities, world.activities, world.cities]);
 
   if (!trip) {
     return (
@@ -192,6 +201,12 @@ export default function TripViewPage() {
           </Button>
         </div>
       </div>
+
+      {/* Trip Pace Meter & Burnout Guard */}
+      <TripPaceOverview
+        overview={paceOverview}
+        onAutoRebalance={() => setIsPaceModalOpen(true)}
+      />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         {/* Main Content: Day-wise Layout */}
@@ -443,6 +458,14 @@ export default function TripViewPage() {
           </div>
         </div>
       </div>
+
+      {/* Trip Pace & Burnout Rebalancer Modal */}
+      <PaceRebalanceModal
+        isOpen={isPaceModalOpen}
+        onClose={() => setIsPaceModalOpen(false)}
+        overview={paceOverview}
+        trip={trip}
+      />
     </div>
   );
 }

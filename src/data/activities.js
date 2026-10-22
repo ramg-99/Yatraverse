@@ -41,16 +41,26 @@ const IMGS = {
 /** @type {import('./schema.js').Activity[]} */
 export const activities = cities.flatMap((city, ci) =>
   Object.entries(TEMPLATES).flatMap(([type, pairs], ti) =>
-    pairs.map(([title, blurb], pi) => ({
-      id: `a_${city.id}_${type}_${pi}`,
-      city_id: city.id,
-      name: `${city.name} ${title}`,
-      type,
-      cost: Math.round(COSTS[type] * (0.7 + city.cost_index * 0.12) + ci * 20 + ti * 15),
-      duration_min: DURS[type] + pi * 15,
-      image: IMGS[type],
-      description: `${blurb} In ${city.name}, this sits close to the ${city.best_season} sweet spot.`,
-      rating: 4.2 + ((ci + ti + pi) % 8) * 0.1,
-    })),
+    pairs.map(([title, blurb], pi) => {
+      const isOutdoor = type === 'sightseeing' || type === 'adventure' || (type === 'nightlife' && pi === 1);
+      const altType = type === 'adventure' ? 'wellness' : 'culture';
+      const indoorAltId = isOutdoor ? `a_${city.id}_${altType}_0` : null;
+
+      return {
+        id: `a_${city.id}_${type}_${pi}`,
+        city_id: city.id,
+        name: `${city.name} ${title}`,
+        type,
+        is_outdoor: isOutdoor,
+        indoor_alternative_id: indoorAltId,
+        lat: Number((city.lat + (ti * 0.008 - 0.015) + pi * 0.006).toFixed(4)),
+        lng: Number((city.lng + (pi * 0.01 - 0.012) + ti * 0.005).toFixed(4)),
+        cost: Math.round(COSTS[type] * (0.7 + city.cost_index * 0.12) + ci * 20 + ti * 15),
+        duration_min: DURS[type] + pi * 15,
+        image: IMGS[type],
+        description: `${blurb} In ${city.name}, this sits close to the ${city.best_season} sweet spot.`,
+        rating: 4.2 + ((ci + ti + pi) % 8) * 0.1,
+      };
+    }),
   ),
 );

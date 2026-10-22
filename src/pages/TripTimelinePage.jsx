@@ -20,6 +20,12 @@ import { Input, Label } from '@/components/ui/input.jsx';
 import { money } from '@/lib/utils.js';
 import { onImgError } from '@/lib/image.js';
 import { updateStopActivity } from '@/services/trips.js';
+import { WeatherBadge } from '@/components/timeline/WeatherBadge.jsx';
+import { PaceMeterBadge } from '@/components/timeline/PaceMeterBadge.jsx';
+import { TripPaceOverview } from '@/components/timeline/TripPaceOverview.jsx';
+import { WeatherRescheduleModal } from '@/components/timeline/WeatherRescheduleModal.jsx';
+import { PaceRebalanceModal } from '@/components/timeline/PaceRebalanceModal.jsx';
+import { calculateDayPace, calculateTripPaceOverview } from '@/lib/paceCalculator.js';
 
 const COLORS = ['#FFB02E', '#2DD4BF', '#FF6B6B', '#a78bfa', '#38bdf8'];
 
@@ -39,6 +45,8 @@ export default function TripTimelinePage() {
   const [view, setView] = useState(initialView);
   const [editItem, setEditItem] = useState(null); // Activity being quick-edited
   const [expandedDays, setExpandedDays] = useState({});
+  const [weatherModalData, setWeatherModalData] = useState(null);
+  const [isPaceModalOpen, setIsPaceModalOpen] = useState(false);
 
   const handleSetView = (v) => {
     setView(v);
@@ -81,6 +89,10 @@ export default function TripTimelinePage() {
       return [];
     }
   }, [startDate, endDate]);
+
+  const paceOverview = useMemo(() => {
+    return calculateTripPaceOverview(days, stops, world.stopActivities, world.activities, world.cities);
+  }, [days, stops, world.stopActivities, world.activities, world.cities]);
 
   const toggleDay = (iso) => {
     setExpandedDays((prev) => ({ ...prev, [iso]: !prev[iso] }));
@@ -178,6 +190,12 @@ export default function TripTimelinePage() {
         </div>
       </div>
 
+      {/* Feature 2: Trip Pace Meter & Burnout Guard */}
+      <TripPaceOverview
+        overview={paceOverview}
+        onAutoRebalance={() => setIsPaceModalOpen(true)}
+      />
+
       {/* Main View: Vertical Timeline vs Monthly Calendar */}
       {view === 'timeline' ? (
         <DndContext onDragEnd={onDragEnd}>
@@ -191,6 +209,15 @@ export default function TripTimelinePage() {
               }) || stops[0];
               const city = world.cities.find((c) => c.id === (stop?.city_id || stop?.cityId)) || stop?.city;
               const acts = world.stopActivities.filter((sa) => sa.day_date === iso);
+              const dayPace = calculateDayPace(acts, world.activities, city);
+              const outdoorActs = acts.filter((sa) => {
+                const a = world.activities.find((x) => x.id === sa.activity_id);
+                return a?.is_outdoor !== false;
+              });
+              const sunnyDays = days
+                .map((dItem, dIdx) => ({ iso: format(dItem, 'yyyy-MM-dd'), dayIndex: dIdx }))
+                .filter((dItem) => dItem.iso !== iso);
+
               const stopIndex = stop ? stops.indexOf(stop) : 0;
               const accentColor = COLORS[stopIndex % COLORS.length] || '#FFB02E';
               const isExpanded = expandedDays[iso] !== false; // Default expanded
@@ -204,12 +231,12 @@ export default function TripTimelinePage() {
                 >
                   {/* Day Header */}
                   <div
-                    className="flex cursor-pointer items-center justify-between"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer"
                     onClick={() => toggleDay(iso)}
                   >
                     <div className="flex items-center gap-3">
                       <span
-                        className="flex h-7 w-7 items-center justify-center rounded-full font-mono text-xs font-bold"
+                        className="flex h-7 w-7 items-center justify-center rounded-full font-mono text-xs font-bold shrink-0"
                         style={{ backgroundColor: `${accentColor}25`, color: accentColor }}
                       >
                         {index + 1}
@@ -227,9 +254,31 @@ export default function TripTimelinePage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 text-muted">
-                      <span className="text-xs">Drag activity into this card</span>
-                      {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    {/* Weather Badge & Trip Pace Badge */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <WeatherBadge
+                        city={city}
+                        dateIso={iso}
+                        dayIndex={index}
+                        outdoorCount={outdoorActs.length}
+                        onFixDay={(weather) =>
+                          setWeatherModalData({
+                            dateIso: iso,
+                            dayIndex: index,
+                            weather,
+                            city,
+                            outdoorActs,
+                            sunnyDays,
+                          })
+                        }
+                      />
+                      <PaceMeterBadge
+                        pace={dayPace}
+                        onRebalance={() => setIsPaceModalOpen(true)}
+                      />
+                      <div className="flex items-center gap-1 text-muted text-xs pl-2">
+                        {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      </div>
                     </div>
                   </div>
 
@@ -243,6 +292,7 @@ export default function TripTimelinePage() {
                       ) : (
                         acts.map((sa) => {
                           const act = world.activities.find((a) => a.id === sa.activity_id);
+                          const isOutdoor = act?.is_outdoor !== false;
                           return (
                             <div
                               key={sa.id}
@@ -255,7 +305,18 @@ export default function TripTimelinePage() {
                                   {sa.start_time || '10:00'}
                                 </span>
                                 <div>
-                                  <p className="font-semibold text-parchment">{act?.name}</p>
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className={`rounded px-1.5 py-0.2 font-mono text-[9px] font-bold ${
+                                        isOutdoor
+                                          ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                                          : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                                      }`}
+                                    >
+                                      {isOutdoor ? '🌲 Outdoor' : '🏛️ Indoor'}
+                                    </span>
+                                    <p className="font-semibold text-parchment">{act?.name}</p>
+                                  </div>
                                   {sa.notes && (
                                     <p className="text-aurora text-[11px] mt-0.5 italic">Note: {sa.notes}</p>
                                   )}
@@ -404,7 +465,7 @@ export default function TripTimelinePage() {
                         )}
                       </div>
 
-                      {/* City Highlight */}
+                      {/* City Highlight & Weather/Pace Badges */}
                       {city && (
                         <div
                           className="mt-1.5 flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold truncate"
@@ -419,17 +480,44 @@ export default function TripTimelinePage() {
                         </div>
                       )}
 
+                      {/* Weather and Pace Indicators for Trip Days */}
+                      {isTripDay && (
+                        <div className="mt-1 flex items-center justify-between gap-1">
+                          <WeatherBadge
+                            city={city}
+                            dateIso={iso}
+                            dayIndex={dayIndex}
+                            outdoorCount={acts.filter((sa) => world.activities.find((a) => a.id === sa.activity_id)?.is_outdoor !== false).length}
+                            onFixDay={(weather) =>
+                              setWeatherModalData({
+                                dateIso: iso,
+                                dayIndex,
+                                weather,
+                                city,
+                                outdoorActs: acts.filter((sa) => world.activities.find((a) => a.id === sa.activity_id)?.is_outdoor !== false),
+                                sunnyDays: days
+                                  .map((dItem, dIdx) => ({ iso: format(dItem, 'yyyy-MM-dd'), dayIndex: dIdx }))
+                                  .filter((dItem) => dItem.iso !== iso),
+                              })
+                            }
+                          />
+                          <PaceMeterBadge pace={calculateDayPace(acts, world.activities, city)} />
+                        </div>
+                      )}
+
                       {/* Activities for this day */}
                       <div className="mt-2 space-y-1">
                         {acts.slice(0, 2).map((sa) => {
                           const act = world.activities.find((a) => a.id === sa.activity_id);
+                          const isOutdoor = act?.is_outdoor !== false;
                           return (
                             <p
                               key={sa.id}
                               onClick={() => setEditItem({ ...sa, actName: act?.name })}
-                              className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[10px] text-parchment truncate cursor-pointer hover:bg-white/20 transition-colors"
+                              className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[10px] text-parchment truncate cursor-pointer hover:bg-white/20 transition-colors flex items-center gap-1"
                               title="Click to edit activity"
                             >
+                              <span>{isOutdoor ? '🌲' : '🏛️'}</span>
                               <span className="text-saffron font-bold">{sa.start_time}</span> · {act?.name}
                             </p>
                           );
@@ -530,6 +618,23 @@ export default function TripTimelinePage() {
           </div>
         </div>
       )}
+
+      {/* Feature 1: Weather-Smart Auto-Reschedule Modal */}
+      <WeatherRescheduleModal
+        isOpen={Boolean(weatherModalData)}
+        onClose={() => setWeatherModalData(null)}
+        dayData={weatherModalData}
+        trip={trip}
+        currency={trip?.currency || 'INR'}
+      />
+
+      {/* Feature 2: Trip Pace & Burnout Rebalancer Modal */}
+      <PaceRebalanceModal
+        isOpen={isPaceModalOpen}
+        onClose={() => setIsPaceModalOpen(false)}
+        overview={paceOverview}
+        trip={trip}
+      />
     </div>
   );
 }
