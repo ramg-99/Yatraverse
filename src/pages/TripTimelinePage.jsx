@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button.jsx';
 import { Input, Label } from '@/components/ui/input.jsx';
 import { money } from '@/lib/utils.js';
 import { onImgError } from '@/lib/image.js';
+import { updateStopActivity } from '@/services/trips.js';
 
 const COLORS = ['#FFB02E', '#2DD4BF', '#FF6B6B', '#a78bfa', '#38bdf8'];
 
@@ -93,6 +94,7 @@ export default function TripTimelinePage() {
     w.setStopActivities(
       w.stopActivities.map((sa) => (sa.id === saId ? { ...sa, day_date: newDay } : sa))
     );
+    updateStopActivity(saId, { day_date: newDay }).catch(() => {});
   };
 
   const saveEdit = () => {
@@ -101,6 +103,7 @@ export default function TripTimelinePage() {
     w.setStopActivities(
       w.stopActivities.map((sa) => (sa.id === editItem.id ? { ...sa, ...editItem } : sa))
     );
+    updateStopActivity(editItem.id, editItem).catch(() => {});
     setEditItem(null);
   };
 

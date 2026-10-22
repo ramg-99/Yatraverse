@@ -409,6 +409,40 @@ export async function removeStopActivity(id) {
   }, { failRate: 0.01 });
 }
 
+/** @param {string} id @param {Partial<import('@/data/schema.js').StopActivity>} patch */
+export async function updateStopActivity(id, patch) {
+  const online = await isBackendAvailable();
+  if (online && id) {
+    try {
+      const data = await apiRequest(`/trips/stop-activities/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          startTime: patch.start_time || patch.startTime,
+          costOverride: patch.cost_override !== undefined ? patch.cost_override : patch.costOverride,
+          notes: patch.notes,
+          dayDate: patch.day_date || patch.dayDate,
+        }),
+      });
+      const sa = normalizeStopActivity(data);
+      const w = useWorldStore.getState();
+      w.setStopActivities(
+        w.stopActivities.map((s) => (s.id === id ? { ...s, ...sa } : s))
+      );
+      return sa;
+    } catch {
+      // fallback
+    }
+  }
+
+  return simulate(() => {
+    const w = useWorldStore.getState();
+    w.setStopActivities(
+      w.stopActivities.map((s) => (s.id === id ? { ...s, ...patch } : s))
+    );
+    return true;
+  });
+}
+
 /** @param {string[]} orderedIds */
 export function reorderStopActivities(orderedIds) {
   return simulate(() => {
@@ -453,4 +487,36 @@ export async function addExpense(payload) {
     w.setExpenses([...w.expenses, exp]);
     return exp;
   });
+}
+
+/** @param {{ tripId: string, stopActivityId?: string, activityId: string, value: number }} payload */
+export async function castVoteApi(payload) {
+  const online = await isBackendAvailable();
+  if (online && payload.tripId) {
+    try {
+      return await apiRequest(`/trips/${payload.tripId}/votes`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    } catch {
+      // fallback
+    }
+  }
+  return null;
+}
+
+/** @param {{ tripId: string, userId: string, role?: string }} payload */
+export async function addMemberApi(payload) {
+  const online = await isBackendAvailable();
+  if (online && payload.tripId) {
+    try {
+      return await apiRequest(`/trips/${payload.tripId}/members`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    } catch {
+      // fallback
+    }
+  }
+  return null;
 }

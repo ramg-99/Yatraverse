@@ -3,11 +3,12 @@ import { ThumbsUp, ThumbsDown, AlertCircle } from 'lucide-react';
 import { useWorldStore } from '@/store/useWorldStore.js';
 import { useAuthStore } from '@/store/useAuthStore.js';
 import { cn } from '@/lib/utils.js';
+import { castVoteApi } from '@/services/trips.js';
 
 export function VotesBadge({ tripId, stopActivityId, activityId, onAiResolve }) {
   const world = useWorldStore();
   const currentUser = useAuthStore((s) => s.user);
-  const currentUserId = currentUser?.id || 'u_demo';
+  const currentUserId = currentUser?.id || 'u_aarav';
 
   const votes = world.votes || [];
 
@@ -30,6 +31,7 @@ export function VotesBadge({ tripId, stopActivityId, activityId, onAiResolve }) 
   const handleVote = (e, val) => {
     e.stopPropagation();
     world.castVote(tripId, stopActivityId, activityId, currentUserId, val);
+    castVoteApi({ tripId, stopActivityId, activityId, value: val }).catch(() => {});
   };
 
   // Get names of upvoters & downvoters for tooltip

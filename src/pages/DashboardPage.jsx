@@ -208,7 +208,7 @@ export default function DashboardPage() {
 
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 <Link to={`/trips/${upcoming.id}/build`} className="w-full sm:w-auto">
-                  <Button size="md" className="w-full bg-accent text-white hover:opacity-90 font-semibold shadow-xs">
+                  <Button size="md" className="w-full bg-saffron text-slate-950 font-bold hover:brightness-105 shadow-md">
                     Open Itinerary Studio <ChevronRight className="ml-1 h-4 w-4" />
                   </Button>
                 </Link>
@@ -395,7 +395,7 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="pt-2 border-t border-border/50 flex items-center justify-between text-xs">
-                    <Link to={`/trips/${t.id}/build`} className="text-accent hover:underline font-semibold flex items-center gap-1">
+                    <Link to={`/trips/${t.id}/build`} className="text-saffron hover:underline font-bold flex items-center gap-1">
                       Itinerary Studio <ArrowRight className="h-3 w-3" />
                     </Link>
                     <Link to={`/trips/${t.id}`} className="text-muted hover:text-parchment">

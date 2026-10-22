@@ -298,4 +298,92 @@ router.post('/:id/expenses', auth, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// GET /api/trips/:id/votes — fetch votes for a trip
+router.get('/:id/votes', auth, async (req, res, next) => {
+  try {
+    const votes = await prisma.vote.findMany({
+      where: { tripId: req.params.id },
+      include: { user: { select: { id: true, name: true, avatarUrl: true } } },
+    });
+    res.json(votes);
+  } catch (e) { next(e); }
+});
+
+// POST /api/trips/:id/votes — cast or toggle vote
+router.post('/:id/votes', auth, async (req, res, next) => {
+  try {
+    const { stopActivityId, activityId, value } = req.body;
+    const userId = req.user.id;
+    const tripId = req.params.id;
+
+    const existing = await prisma.vote.findFirst({
+      where: {
+        tripId,
+        stopActivityId: stopActivityId || null,
+        userId,
+      },
+    });
+
+    if (existing) {
+      if (existing.value === value) {
+        // Toggle off
+        await prisma.vote.delete({ where: { id: existing.id } });
+        return res.json({ action: 'removed', voteId: existing.id });
+      }
+      // Update vote
+      const updated = await prisma.vote.update({
+        where: { id: existing.id },
+        data: { value },
+      });
+      return res.json({ action: 'updated', vote: updated });
+    }
+
+    // New vote
+    const newVote = await prisma.vote.create({
+      data: {
+        tripId,
+        stopActivityId: stopActivityId || null,
+        activityId,
+        userId,
+        value: Number(value) || 1,
+      },
+    });
+    res.status(201).json({ action: 'created', vote: newVote });
+  } catch (e) { next(e); }
+});
+
+// GET /api/trips/:id/members — fetch trip members
+router.get('/:id/members', auth, async (req, res, next) => {
+  try {
+    const members = await prisma.tripMember.findMany({
+      where: { tripId: req.params.id },
+      include: { user: { select: { id: true, name: true, email: true, avatarUrl: true } } },
+    });
+    res.json(members);
+  } catch (e) { next(e); }
+});
+
+// POST /api/trips/:id/members — add collaborator member
+router.post('/:id/members', auth, async (req, res, next) => {
+  try {
+    const { userId, role } = req.body;
+    const member = await prisma.tripMember.upsert({
+      where: {
+        tripId_userId: {
+          tripId: req.params.id,
+          userId,
+        },
+      },
+      update: { role: role || 'member' },
+      create: {
+        tripId: req.params.id,
+        userId,
+        role: role || 'member',
+      },
+      include: { user: { select: { id: true, name: true, email: true, avatarUrl: true } } },
+    });
+    res.status(201).json(member);
+  } catch (e) { next(e); }
+});
+
 module.exports = router;

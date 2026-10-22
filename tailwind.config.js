@@ -9,6 +9,7 @@ export default {
         surface: 'var(--surface)',
         parchment: 'var(--text)',
         saffron: 'var(--accent)',
+        accent: 'var(--accent)',
         aurora: 'var(--aurora)',
         coral: 'var(--coral)',
         border: 'var(--border)',

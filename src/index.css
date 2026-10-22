@@ -80,6 +80,10 @@
   --glass-shadow: 0 10px 25px rgba(21, 27, 59, 0.08);
 }
 
+/* High-contrast dark font for buttons, badges & tabs on bright saffron/amber/aurora */
+.text-ink {
+  color: #090d16 !important;
+}
 
 html,
 body,
