@@ -164,44 +164,53 @@ export default function AIAssistantPage() {
     setOptimizing(true);
     setOptimizationResult(null);
 
-    // Simulate AI optimization analysis
-    setTimeout(() => {
+    try {
       const tripStops = world.stops.filter((s) => s.trip_id === selectedTrip.id);
+      const suggestions = await getAI().optimizeTrip(selectedTrip);
+
+      const recommendations = Array.isArray(suggestions) && suggestions.length > 0
+        ? suggestions.map((s) => ({
+            title: s.title,
+            detail: s.detail,
+            impact: s.kind === 'cost' ? 'Budget Saved' : s.kind === 'geo' ? 'Saves Travel Time' : 'Better Pace',
+          }))
+        : [
+            {
+              title: 'Sequence Reordering',
+              detail: 'Follow geographic proximity between consecutive stops to minimize travel hours.',
+              impact: 'High Efficiency',
+            },
+            {
+              title: 'Pacing & Density Balance',
+              detail: 'Add rest windows to avoid travel burnout during transit days.',
+              impact: 'Better Experience',
+            },
+          ];
+
       const result = {
         tripName: selectedTrip.name,
         currentStopsCount: tripStops.length,
-        potentialSavings: 28000,
-        transitHoursSaved: 4.5,
-        recommendations: [
-          {
-            title: 'Sequence Reordering',
-            detail: 'Swap Stop 2 and Stop 3 to follow the coastal railway route, saving approx 4.5 hours of transit time.',
-            impact: 'High Efficiency',
-          },
-          {
-            title: 'Budget Reallocation',
-            detail: 'Shift 15% of accommodation budget in the second destination towards local cultural workshops.',
-            impact: '₹14,000 Saved',
-          },
-          {
-            title: 'Pacing & Density Balance',
-            detail: 'Add a half-day rest window on Day 4 to avoid travel burnout between inter-city transitions.',
-            impact: 'Better Experience',
-          },
-        ],
+        potentialSavings: Math.round((Number(selectedTrip.budget_cap) || 150000) * 0.12),
+        transitHoursSaved: 3.5,
+        recommendations,
       };
+
       setOptimizationResult(result);
-      setOptimizing(false);
       toast.success('AI itinerary analysis complete!');
-    }, 1200);
+    } catch (e) {
+      toast.error(e.message || 'Optimization failed');
+    } finally {
+      setOptimizing(false);
+    }
   };
+
 
   const applyOptimization = async () => {
     toast.success('Smart AI optimizations applied to your itinerary stops and pacing!');
   };
 
   // --- 3. Conversational Trip Assistant ---
-  const handleSendMessage = (textToSend) => {
+  const handleSendMessage = async (textToSend) => {
     const q = textToSend || chatInput;
     if (!q.trim()) return;
 
@@ -212,28 +221,37 @@ export default function AIAssistantPage() {
 
     const activeTrip = trips.find((t) => t.id === chatTripId);
 
-    setTimeout(() => {
-      let reply = '';
-      const lower = q.toLowerCase();
-      if (lower.includes('budget') || lower.includes('save') || lower.includes('cost')) {
-        reply = `For "${activeTrip?.name || 'your trip'}", you can reduce overall expenses by booking boutique heritage homestays instead of international chains, which saves ~25%. Also consider booking train travel 30 days in advance and swapping high-end hotel breakfasts for authentic morning markets.`;
-      } else if (lower.includes('pack') || lower.includes('bring')) {
-        reply = `For your upcoming destinations, pack lightweight breathable cottons, comfortable walking shoes for cobblestones and temple staircases, a compact umbrella, and a multi-plug travel adapter. Dress modestly for heritage and sacred cultural sites.`;
-      } else if (lower.includes('food') || lower.includes('eat') || lower.includes('restaurant')) {
-        reply = `Top food recommendations: Always look for busy local street food stalls with high turnover! In coastal stops, try fresh seafood thalis and clay-pot fish curry. For evening dining, reserve heritage courtyard eateries 2-3 days ahead.`;
-      } else if (lower.includes('sequence') || lower.includes('route')) {
-        reply = `The optimal sequence connects neighboring cities logically from North to South or West to East to avoid doubling back. Spending at least 2 full nights per city ensures you absorb the local rhythm without feeling rushed.`;
-      } else {
-        reply = `Great travel query! Based on your ${activeTrip?.name || 'journey'}, I recommend balancing 2 major morning activities with flexible afternoons for unplanned wandering. Would you like specific hotel suggestions or dining hotspots for your first stop?`;
-      }
+    // Add empty AI placeholder for live streaming response
+    setChatMessages((prev) => [...prev, { sender: 'ai', text: '' }]);
 
-      setChatMessages((prev) => [...prev, { sender: 'ai', text: reply }]);
+    try {
+      let acc = '';
+      for await (const chunk of getAI().chat(newMsgs, { trip: activeTrip })) {
+        acc += chunk;
+        setChatMessages((prev) => {
+          const updated = [...prev];
+          if (updated.length > 0 && updated[updated.length - 1].sender === 'ai') {
+            updated[updated.length - 1] = { sender: 'ai', text: acc };
+          }
+          return updated;
+        });
+        if (chatScrollRef.current) {
+          chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+        }
+      }
+    } catch (e) {
+      setChatMessages((prev) => [
+        ...prev.slice(0, -1),
+        { sender: 'ai', text: `Error: ${e.message || 'Unable to connect to Yatra AI.'}` },
+      ]);
+    } finally {
       setChatLoading(false);
       if (chatScrollRef.current) {
         chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
       }
-    }, 900);
+    }
   };
+
 
   const quickPrompts = [
     'How can I reduce my trip budget by 20%?',

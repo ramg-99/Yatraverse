@@ -1,7 +1,22 @@
-import { Link } from 'react-router-dom';
-import { lazy, Suspense, useMemo } from 'react';
+import { useState, useMemo, lazy, Suspense } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { differenceInDays, format } from 'date-fns';
-import { PlusCircle, Compass, MapPin, Sparkles, Calendar, ArrowRight, DollarSign, Clock } from 'lucide-react';
+import {
+  PlusCircle,
+  Compass,
+  MapPin,
+  Sparkles,
+  Calendar,
+  ArrowRight,
+  CreditCard,
+  Clock,
+  Search,
+  CheckCircle2,
+  Globe2,
+  TrendingUp,
+  ChevronRight,
+  Filter,
+} from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore.js';
 import { useWorldStore } from '@/store/useWorldStore.js';
 import { greeting, money, tripStatus } from '@/lib/utils.js';
@@ -14,9 +29,13 @@ import { YatraAiSymbol } from '@/components/ai/YatraAiSymbol.jsx';
 const TripMap = lazy(() => import('@/components/map/TripMap.jsx').then((m) => ({ default: m.TripMap })));
 
 export default function DashboardPage() {
+  const nav = useNavigate();
   const user = useAuthStore((s) => s.user) || { name: 'Traveller', currency: 'INR' };
   const world = useWorldStore();
   const setChatOpen = useWorldStore((s) => s.setChatOpen);
+  const [destinationSearch, setDestinationSearch] = useState('');
+  const [activeCategory, setActiveCategory] = useState('all');
+
   const mine = world.trips.filter((t) => t.user_id === user.id || t.collaborators?.includes(user.id));
   const upcoming = mine.find((t) => tripStatus(t.start_date, t.end_date) === 'upcoming') || mine[0];
   const daysUntil = upcoming ? Math.max(0, differenceInDays(new Date(upcoming.start_date), new Date())) : 0;
@@ -24,78 +43,196 @@ export default function DashboardPage() {
   const totalCap = mine.reduce((s, t) => s + (t.budget_cap || 150000), 0);
   const animatedSpend = useCountUp(totalPlannedSpend);
 
-  // Recommended popular cities
-  const recs = useMemo(() => {
-    return world.cities.slice(0, 6);
-  }, [world.cities]);
-
+  const upcomingStops = upcoming ? world.stops.filter((s) => s.trip_id === upcoming.id) : [];
+  const upcomingSpend = upcoming ? spendFor(upcoming.id) : { total: 0 };
   const allPoints = mine.flatMap((t) => pointsFor(t.id));
 
+  // Destination Categories
+  const categories = [
+    { id: 'all', label: 'All Destinations' },
+    { id: 'beaches', label: '🏖️ Coastal & Beaches', filter: ['c_goa', 'c_bkk', 'c_syd', 'c_bcn'] },
+    { id: 'culture', label: '🏛️ Heritage & Culture', filter: ['c_jai', 'c_tyo', 'c_lis', 'c_rak'] },
+    { id: 'cities', label: '🌆 Metro & Skyline', filter: ['c_mum', 'c_nyc', 'c_sin', 'c_dxb', 'c_sel'] },
+  ];
+
+  const filteredCities = useMemo(() => {
+    let list = world.cities;
+    if (activeCategory !== 'all') {
+      const match = categories.find((c) => c.id === activeCategory);
+      if (match?.filter) {
+        list = list.filter((c) => match.filter.includes(c.id));
+      }
+    }
+    if (destinationSearch.trim()) {
+      const q = destinationSearch.toLowerCase();
+      list = list.filter((c) => c.name.toLowerCase().includes(q) || c.country.toLowerCase().includes(q));
+    }
+    return list.slice(0, 8);
+  }, [world.cities, activeCategory, destinationSearch]);
+
+  const [durationDays, setDurationDays] = useState(7);
+  const [budgetTier, setBudgetTier] = useState('Moderate');
+
+  const handleHeroPlan = (e) => {
+    e.preventDefault();
+    const dest = destinationSearch.trim() || 'Multi-City Adventure';
+    nav(`/trips/new?name=${encodeURIComponent(dest)}&days=${durationDays}`);
+  };
+
   return (
-    <div className="space-y-8">
-      {/* Welcome Banner */}
-      <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border/40 pb-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-xs uppercase tracking-widest text-aurora">
-              Dashboard & Home
-            </span>
-            <span className="rounded-full bg-saffron/20 px-2 py-0.5 font-mono text-[10px] text-saffron">
-              {greeting()}
-            </span>
-          </div>
-          <h1 className="mt-2 font-display text-4xl font-bold tracking-tight text-parchment">
-            Welcome back, {user.name.split(' ')[0]}!
-          </h1>
-          <p className="mt-1 text-sm text-muted">
-            Track your journeys, manage multi-city budgets, and discover curated destinations.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Circular Yatra AI Symbol in Dashboard Header */}
-          <div
-            onClick={() => setChatOpen(true)}
-            className="flex items-center gap-2.5 rounded-2xl border border-aurora/40 bg-aurora/10 px-3 py-1.5 shadow-sm hover:border-aurora/70 hover:bg-aurora/15 transition-all cursor-pointer group"
-            title="Click to open Yatra AI Text Assistant"
-          >
-            <YatraAiSymbol
-              size="sm"
-              withPulse={true}
-              onClick={() => setChatOpen(true)}
-              title="Yatra AI - Click to launch text assistant"
-            />
-            <div className="text-left">
-              <div className="flex items-center gap-1.5">
-                <span className="font-display text-xs font-bold text-parchment group-hover:text-aurora transition-colors">
-                  Yatra AI
-                </span>
-                <span className="flex h-1.5 w-1.5 rounded-full bg-aurora animate-pulse" />
-              </div>
-              <p className="text-[10px] text-aurora font-medium leading-tight">Text Assistant</p>
+    <div className="space-y-8 max-w-7xl mx-auto">
+      {/* 1. Personalized Travel Cockpit & Welcome Command Bar */}
+      <div className="glass relative overflow-hidden rounded-3xl border border-border/80 p-6 sm:p-8 shadow-md bg-gradient-to-br from-surface via-surface to-accent/10">
+        {/* Subtle ambient glow */}
+        <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-accent/15 blur-3xl" />
+
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/15 px-3 py-1 text-xs font-bold text-accent shadow-xs">
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Travel Command Center</span>
+              </span>
+              <span className="rounded-full border border-border/80 bg-surface/80 px-3 py-1 text-xs font-mono text-muted">
+                {greeting()}, {user.name}
+              </span>
             </div>
+
+            <h1 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-parchment">
+              Ready for your next journey?
+            </h1>
+            <p className="text-sm text-muted max-w-xl leading-relaxed">
+              {upcoming
+                ? `Your upcoming expedition "${upcoming.name}" is scheduled in ${daysUntil} days. All offline boarding passes and Gemini AI trajectories are synced.`
+                : 'Explore 16 global hubs, craft multi-city itineraries, and track real-time budgets with automated fuel gauges.'}
+            </p>
           </div>
 
-          <Link to="/trips/new">
-            <Button size="lg" className="shadow-md shadow-saffron/20">
-              <PlusCircle className="mr-2 h-4 w-4" /> Plan New Trip
+          {/* Quick Action Buttons */}
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <Button
+              type="button"
+              onClick={() => setChatOpen(true)}
+              variant="outline"
+              className="border-border/80 hover:border-accent text-parchment font-semibold shadow-xs"
+            >
+              <Sparkles className="mr-2 h-4 w-4 text-accent" />
+              <span>Ask Yatra AI</span>
             </Button>
-          </Link>
-          <Link to="/ai">
-            <Button size="lg" variant="outline" className="border-aurora/40 text-aurora hover:bg-aurora/10">
-              <Sparkles className="mr-2 h-4 w-4" /> Yatra AI Suite
-            </Button>
-          </Link>
+
+            <Link to="/cities">
+              <Button
+                variant="outline"
+                className="border-border/80 hover:border-accent text-parchment font-semibold shadow-xs"
+              >
+                <Compass className="mr-2 h-4 w-4 text-aurora" />
+                <span>Explore Cities</span>
+              </Button>
+            </Link>
+
+            <Link to="/trips/new">
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 font-extrabold text-sm bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 text-slate-950 shadow-[0_0_22px_rgba(251,191,36,0.55)] border-2 border-amber-200 hover:brightness-105 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer select-none"
+              >
+                <PlusCircle className="h-4.5 w-4.5 text-slate-950 stroke-[2.5]" />
+                <span className="font-extrabold tracking-wide text-slate-950">+ Plan New Trip</span>
+              </button>
+            </Link>
+          </div>
         </div>
       </div>
 
-      {/* Budget Highlights & KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="glass rounded-2xl p-5 border border-border/40">
-          <div className="flex items-center justify-between text-muted text-xs">
-            <span>Total Planned Budget</span>
-            <DollarSign className="h-4 w-4 text-saffron" />
+
+      {/* 2. Primary Upcoming Trip Spotlight (if exists) */}
+      {upcoming && (
+        <div className="glass rounded-3xl p-6 border border-border/80 overflow-hidden relative shadow-sm">
+          <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between">
+            <div className="flex flex-col sm:flex-row gap-5 items-start sm:items-center w-full lg:w-auto">
+              <div className="relative h-28 w-28 sm:h-32 sm:w-32 rounded-2xl overflow-hidden shrink-0 shadow-md">
+                <img
+                  src={upcoming.cover_url}
+                  alt={upcoming.name}
+                  onError={(e) => onImgError(e, upcoming.name)}
+                  className="h-full w-full object-cover"
+                />
+                <span className="absolute top-2 left-2 rounded-full bg-black/70 px-2 py-0.5 font-mono text-[10px] text-accent font-semibold">
+                  {daysUntil === 0 ? 'Happening Now' : `In ${daysUntil} Days`}
+                </span>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs uppercase font-mono tracking-wider text-accent font-bold">
+                    Primary Journey
+                  </span>
+                  <span className="rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold">
+                    {tripStatus(upcoming.start_date, upcoming.end_date)}
+                  </span>
+                </div>
+                <h2 className="font-display text-2xl font-bold text-parchment">
+                  {upcoming.name}
+                </h2>
+                <p className="text-xs text-muted flex items-center gap-1.5 font-mono">
+                  <Calendar className="h-3.5 w-3.5" />
+                  {format(new Date(upcoming.start_date), 'dd MMM')} — {format(new Date(upcoming.end_date), 'dd MMM yyyy')}
+                </p>
+
+                {/* Stops Breadcrumb */}
+                {upcomingStops.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1 pt-1">
+                    {upcomingStops.map((stop, i) => {
+                      const c = world.cities.find((x) => x.id === stop.city_id);
+                      return (
+                        <span key={stop.id} className="inline-flex items-center text-xs text-parchment font-medium">
+                          <span className="rounded-md bg-border/50 px-2 py-0.5 text-[11px]">
+                            {c ? c.name : 'Stop'}
+                          </span>
+                          {i < upcomingStops.length - 1 && <span className="mx-1 text-muted">→</span>}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row lg:flex-col items-start lg:items-end justify-between w-full lg:w-auto gap-3 border-t lg:border-t-0 border-border/40 pt-4 lg:pt-0">
+              <div className="text-left lg:text-right">
+                <p className="text-xs text-muted">Planned Spend / Budget Cap</p>
+                <p className="font-mono text-xl font-bold text-parchment">
+                  {money(upcomingSpend.total, user.currency)}{' '}
+                  <span className="text-xs text-muted font-normal">/ {money(upcoming.budget_cap, user.currency)}</span>
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Link to={`/trips/${upcoming.id}/build`} className="w-full sm:w-auto">
+                  <Button size="md" className="w-full bg-accent text-white hover:opacity-90 font-semibold shadow-xs">
+                    Open Itinerary Studio <ChevronRight className="ml-1 h-4 w-4" />
+                  </Button>
+                </Link>
+                <Link to={`/trips/${upcoming.id}`}>
+                  <Button size="md" variant="outline" className="border-border">
+                    View
+                  </Button>
+                </Link>
+              </div>
+            </div>
           </div>
-          <p className="mt-2 font-mono text-3xl font-bold text-saffron">
+        </div>
+      )}
+
+      {/* 3. Core Travel Overview Metrics */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="glass rounded-2xl p-5 border border-border/70 hover:border-accent/40 transition-all shadow-xs">
+          <div className="flex items-center justify-between text-muted text-xs">
+            <span className="font-medium">Total Planned Budget</span>
+            <div className="h-8 w-8 rounded-xl bg-accent/15 flex items-center justify-center text-accent">
+              <CreditCard className="h-4 w-4" />
+            </div>
+          </div>
+          <p className="mt-2 font-mono text-2xl font-bold text-parchment">
             {money(animatedSpend, user.currency)}
           </p>
           <p className="mt-1 text-xs text-muted">
@@ -103,97 +240,96 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <div className="glass rounded-2xl p-5 border border-border/40">
+        <div className="glass rounded-2xl p-5 border border-border/70 hover:border-accent/40 transition-all shadow-xs">
           <div className="flex items-center justify-between text-muted text-xs">
-            <span>Next Departure</span>
-            <Clock className="h-4 w-4 text-aurora" />
+            <span className="font-medium">Upcoming Journeys</span>
+            <div className="h-8 w-8 rounded-xl bg-teal-500/15 flex items-center justify-center text-teal-600 dark:text-teal-400">
+              <Clock className="h-4 w-4" />
+            </div>
           </div>
-          <p className="mt-2 font-display text-3xl font-bold text-parchment">
-            {upcoming ? `${daysUntil} Days` : 'No Trips'}
+          <p className="mt-2 font-display text-2xl font-bold text-parchment">
+            {upcoming ? `${daysUntil} Days` : 'Ready'}
           </p>
           <p className="mt-1 text-xs text-muted truncate">
-            {upcoming ? upcoming.name : 'Start by planning a trip'}
+            {upcoming ? upcoming.name : 'Create your next vacation plan'}
           </p>
         </div>
 
-        <div className="glass rounded-2xl p-5 border border-border/40">
+        <div className="glass rounded-2xl p-5 border border-border/70 hover:border-accent/40 transition-all shadow-xs">
           <div className="flex items-center justify-between text-muted text-xs">
-            <span>Active Trips</span>
-            <Compass className="h-4 w-4 text-[#a78bfa]" />
+            <span className="font-medium">Active Itineraries</span>
+            <div className="h-8 w-8 rounded-xl bg-indigo-500/15 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+              <Compass className="h-4 w-4" />
+            </div>
           </div>
-          <p className="mt-2 font-display text-3xl font-bold text-parchment">{mine.length}</p>
+          <p className="mt-2 font-display text-2xl font-bold text-parchment">{mine.length}</p>
           <p className="mt-1 text-xs text-muted">
             {mine.filter((t) => tripStatus(t.start_date, t.end_date) === 'upcoming').length} upcoming · {mine.filter((t) => tripStatus(t.start_date, t.end_date) === 'past').length} completed
           </p>
         </div>
 
-        <div className="glass rounded-2xl p-5 border border-border/40">
+        <div className="glass rounded-2xl p-5 border border-border/70 hover:border-accent/40 transition-all shadow-xs">
           <div className="flex items-center justify-between text-muted text-xs">
-            <span>Saved Destinations</span>
-            <MapPin className="h-4 w-4 text-coral" />
+            <span className="font-medium">Mapped Destinations</span>
+            <div className="h-8 w-8 rounded-xl bg-amber-500/15 flex items-center justify-center text-amber-600 dark:text-amber-400">
+              <MapPin className="h-4 w-4" />
+            </div>
           </div>
-          <p className="mt-2 font-display text-3xl font-bold text-parchment">
-            {world.savedDestinations.filter((s) => s.user_id === user.id).length}
+          <p className="mt-2 font-display text-2xl font-bold text-parchment">
+            {allPoints.length}
           </p>
-          <Link to="/profile" className="mt-1 inline-block text-xs text-aurora hover:underline">
-            View in wishlist →
+          <Link to="/cities" className="mt-1 inline-block text-xs text-accent hover:underline font-medium">
+            Browse 16 Global Cities →
           </Link>
         </div>
       </div>
 
-      {/* Yatra AI Circular Symbol & Text Assistant Showcase Card */}
-      <div className="glass relative overflow-hidden rounded-3xl p-6 border border-border/50 shadow-lg bg-gradient-to-r from-white/[0.04] via-aurora/[0.05] to-saffron/[0.04]">
+      {/* 4. Yatra AI Intelligent Concierge Banner */}
+      <div className="glass relative overflow-hidden rounded-3xl p-6 border border-border/80 shadow-sm bg-gradient-to-r from-accent/5 via-teal-500/5 to-transparent">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-4 sm:gap-5">
-            {/* Prominent Circular Shape Symbol */}
             <div
               className="cursor-pointer shrink-0 transition-transform hover:scale-105 active:scale-95"
               onClick={() => setChatOpen(true)}
-              title="Click the circular symbol to open Yatra AI Text Assistant"
+              title="Click to open Yatra AI Travel Concierge"
             >
-              <YatraAiSymbol
-                size="lg"
-                withPulse={true}
-                onClick={() => setChatOpen(true)}
-                title="Yatra AI - Click to launch text assistant"
-              />
+              <YatraAiSymbol size="lg" withPulse={true} onClick={() => setChatOpen(true)} />
             </div>
 
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-mono text-xs uppercase tracking-widest text-aurora font-semibold">
+                <span className="font-mono text-xs uppercase tracking-wider text-accent font-semibold">
                   Intelligent Travel Assistant
                 </span>
-                <span className="flex items-center gap-1 rounded-full bg-aurora/20 px-2 py-0.5 text-[10px] font-mono text-aurora font-bold">
-                  <span className="h-1.5 w-1.5 rounded-full bg-aurora animate-ping" />
-                  Active
+                <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Gemini 3.5 Live
                 </span>
               </div>
-              <h2 className="mt-1 font-display text-2xl font-bold text-parchment flex items-center gap-2">
-                Yatra AI Text Assistant
+              <h2 className="mt-1 font-display text-2xl font-bold text-parchment">
+                Need trip ideas or budget pacing advice?
               </h2>
               <p className="mt-1 text-xs text-muted max-w-xl leading-relaxed">
-                Click the circular symbol to chat with your intelligent travel text assistant. Ask about multi-city pacing, budget reductions, local experiences, or packing checklists.
+                Ask Yatra AI for tailored multi-city routes, packing checklists, street food hot spots, or route optimizations in real time.
               </p>
             </div>
           </div>
 
-          {/* Quick Prompts & Open Button */}
           <div className="flex flex-col sm:items-end gap-2.5 w-full md:w-auto">
             <Button
               size="md"
-              className="bg-gradient-to-r from-saffron to-aurora text-black font-bold shadow-md hover:opacity-95"
+              className="bg-accent text-white font-bold shadow-xs hover:opacity-95"
               onClick={() => setChatOpen(true)}
             >
-              <Sparkles className="mr-2 h-4 w-4 text-black" /> Open Yatra AI
+              <Sparkles className="mr-2 h-4 w-4" /> Ask Yatra AI
             </Button>
             <div className="flex flex-wrap gap-1.5 md:justify-end">
-              {['Plan 7 days in Japan', 'Budget backpacking tips', 'Best street food'].map((prompt) => (
+              {['Plan 7 days in Japan', 'Budget backpacking tips', 'Best street food in Mumbai'].map((prompt) => (
                 <button
                   key={prompt}
                   type="button"
                   onClick={() => setChatOpen(true)}
-                  className="rounded-full border border-border/50 bg-white/5 px-2.5 py-1 text-[11px] text-muted hover:text-parchment hover:border-aurora/60 hover:bg-white/10 transition-colors"
+                  className="rounded-full border border-border bg-surface px-2.5 py-1 text-[11px] text-muted hover:text-parchment hover:border-accent transition-colors"
                 >
                   "{prompt}"
                 </button>
@@ -203,19 +339,19 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* List of Recent Trips */}
+      {/* 5. Your Itineraries */}
       <section>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="font-display text-2xl font-bold text-parchment">Recent Trips</h2>
-            <p className="text-xs text-muted">Your active, upcoming, and past travel plans</p>
+            <h2 className="font-display text-2xl font-bold text-parchment">Your Itineraries</h2>
+            <p className="text-xs text-muted">Manage, edit, and share your multi-city journeys</p>
           </div>
-          <Link to="/trips" className="text-xs text-saffron hover:underline flex items-center gap-1 font-medium">
-            View all trips ({mine.length}) <ArrowRight className="h-3.5 w-3.5" />
+          <Link to="/trips" className="text-xs text-accent hover:underline flex items-center gap-1 font-semibold">
+            View all ({mine.length}) <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {mine.slice(0, 3).map((t) => {
             const stopsCount = world.stops.filter((s) => s.trip_id === t.id).length;
             const spend = spendFor(t.id);
@@ -223,50 +359,47 @@ export default function DashboardPage() {
             return (
               <div
                 key={t.id}
-                className="glass group relative overflow-hidden rounded-2xl border border-border/50 transition-all hover:border-saffron/40 flex flex-col justify-between"
+                className="glass group relative overflow-hidden rounded-3xl border border-border/80 transition-all hover:border-accent hover:shadow-md flex flex-col justify-between"
               >
-                <div className="relative h-36 w-full overflow-hidden">
+                <div className="relative h-44 w-full overflow-hidden">
                   <img
                     src={t.cover_url}
                     alt={t.name}
                     onError={(e) => onImgError(e, t.name)}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/40 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                   <span
-                    className={`absolute top-3 right-3 rounded-full px-2.5 py-0.5 font-mono text-[10px] font-semibold uppercase ${
+                    className={`absolute top-3 right-3 rounded-full px-2.5 py-0.5 font-mono text-[10px] font-semibold uppercase backdrop-blur-md ${
                       status === 'upcoming'
-                        ? 'bg-aurora/20 text-aurora border border-aurora/40'
+                        ? 'bg-emerald-500/80 text-white'
                         : status === 'ongoing'
-                        ? 'bg-saffron/20 text-saffron border border-saffron/40'
-                        : 'bg-white/10 text-muted'
+                        ? 'bg-amber-500/80 text-white'
+                        : 'bg-black/60 text-white'
                     }`}
                   >
                     {status}
                   </span>
-                </div>
-
-                <div className="p-4 flex-1 flex flex-col justify-between">
-                  <div>
-                    <h3 className="font-display text-lg font-bold text-parchment group-hover:text-saffron transition-colors">
-                      {t.name}
-                    </h3>
-                    <p className="mt-1 font-mono text-xs text-muted">
+                  <div className="absolute bottom-3 left-3 right-3 text-white">
+                    <p className="font-display text-lg font-bold truncate">{t.name}</p>
+                    <p className="text-[11px] text-white/80 font-mono">
                       {format(new Date(t.start_date), 'dd MMM yyyy')} → {format(new Date(t.end_date), 'dd MMM yyyy')}
                     </p>
-                    <div className="mt-3 flex items-center gap-3 text-xs text-muted">
-                      <span>{stopsCount} {stopsCount === 1 ? 'stop' : 'stops'}</span>
-                      <span>·</span>
-                      <span className="font-mono text-saffron font-medium">{money(spend.total, user.currency)}</span>
-                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 flex-1 flex flex-col justify-between space-y-4">
+                  <div className="flex items-center justify-between text-xs text-muted">
+                    <span className="font-medium text-parchment">{stopsCount} {stopsCount === 1 ? 'stop' : 'stops'}</span>
+                    <span className="font-mono text-accent font-bold">{money(spend.total, user.currency)}</span>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-border/30 flex items-center justify-between text-xs">
-                    <Link to={`/trips/${t.id}`} className="text-saffron hover:underline font-medium">
-                      View Itinerary →
+                  <div className="pt-2 border-t border-border/50 flex items-center justify-between text-xs">
+                    <Link to={`/trips/${t.id}/build`} className="text-accent hover:underline font-semibold flex items-center gap-1">
+                      Itinerary Studio <ArrowRight className="h-3 w-3" />
                     </Link>
-                    <Link to={`/trips/${t.id}/build`} className="text-muted hover:text-parchment">
-                      Edit Stops
+                    <Link to={`/trips/${t.id}`} className="text-muted hover:text-parchment">
+                      Quick View
                     </Link>
                   </div>
                 </div>
@@ -276,78 +409,81 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* Recommended Destinations (Popular Cities) */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
+      {/* 6. Explore Curated Destinations with Categories */}
+      <section className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h2 className="font-display text-2xl font-bold text-parchment">Recommended Destinations</h2>
-            <p className="text-xs text-muted">Popular cities ready to add to your next trip</p>
+            <h2 className="font-display text-2xl font-bold text-parchment">Explore Top Destinations</h2>
+            <p className="text-xs text-muted">Curated destinations ready to add to your custom itinerary</p>
           </div>
-          <Link to="/cities" className="text-xs text-saffron hover:underline flex items-center gap-1 font-medium">
-            Explore all cities <ArrowRight className="h-3.5 w-3.5" />
+          <Link to="/cities" className="text-xs text-accent hover:underline flex items-center gap-1 font-semibold">
+            All 16 Cities <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-          {recs.map((c) => (
+        {/* Category Pills */}
+        <div className="flex flex-wrap items-center gap-2">
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => setActiveCategory(cat.id)}
+              className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
+                activeCategory === cat.id
+                  ? 'bg-accent text-white shadow-xs'
+                  : 'bg-surface border border-border/80 text-muted hover:text-parchment hover:border-accent/50'
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          {filteredCities.map((c) => (
             <Link
               key={c.id}
               to="/cities"
-              className="glass group overflow-hidden rounded-2xl border border-border/40 hover:border-saffron/50 transition-all flex flex-col"
+              className="glass group overflow-hidden rounded-2xl border border-border/70 hover:border-accent transition-all flex flex-col shadow-xs"
             >
-              <div className="relative h-28 w-full overflow-hidden">
+              <div className="relative h-36 w-full overflow-hidden">
                 <img
                   src={c.image}
                   alt={c.name}
                   onError={(e) => onImgError(e, c.name)}
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                 />
-                <span className="absolute bottom-1 right-1 rounded bg-black/60 px-1.5 py-0.5 font-mono text-[9px] text-saffron">
-                  Cost {c.cost_index}/5
+                <span className="absolute bottom-2 right-2 rounded-md bg-black/70 px-2 py-0.5 font-mono text-[10px] text-white">
+                  {'₹'.repeat(c.cost_index)}
+                </span>
+                <span className="absolute top-2 left-2 rounded-md bg-black/60 px-2 py-0.5 font-mono text-[10px] text-accent font-bold">
+                  {c.iata}
                 </span>
               </div>
-              <div className="p-2.5">
-                <p className="font-display text-sm font-bold text-parchment group-hover:text-saffron truncate">
+              <div className="p-3">
+                <p className="font-display text-base font-bold text-parchment group-hover:text-accent truncate">
                   {c.name}
                 </p>
-                <p className="text-[11px] text-muted truncate">{c.country}</p>
+                <p className="text-xs text-muted truncate">{c.country}</p>
               </div>
             </Link>
           ))}
         </div>
       </section>
 
-      {/* Interactive Trip Map */}
-      <section className="glass rounded-3xl p-6 border border-border/40">
+      {/* 7. Interactive Journey Map */}
+      <section className="glass rounded-3xl p-6 border border-border/80 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="font-display text-2xl font-bold text-parchment">Your Travel Map</h2>
-            <p className="text-xs text-muted">Interactive visualization of all your planned destinations</p>
+            <h2 className="font-display text-2xl font-bold text-parchment">Interactive Route Map</h2>
+            <p className="text-xs text-muted">Geographic layout of all destinations staged across your trips</p>
           </div>
-          <span className="font-mono text-xs text-saffron">{allPoints.length} Destinations mapped</span>
+          <span className="font-mono text-xs text-accent font-semibold">{allPoints.length} Pinned Destinations</span>
         </div>
-        <Suspense fallback={<div className="h-72 animate-pulse rounded-2xl bg-white/5" />}>
+        <Suspense fallback={<div className="h-72 animate-pulse rounded-2xl bg-border/40" />}>
           <TripMap points={allPoints} className="h-72 w-full overflow-hidden rounded-2xl" />
         </Suspense>
       </section>
-
-      {/* Quick Action Hub */}
-      <div className="flex flex-wrap items-center gap-3 pt-2">
-        <Link to="/trips/new">
-          <Button size="sm"><PlusCircle className="mr-1.5 h-4 w-4" />Plan New Trip</Button>
-        </Link>
-        <Link to="/cities">
-          <Button size="sm" variant="outline"><MapPin className="mr-1.5 h-4 w-4" />Browse Cities</Button>
-        </Link>
-        <Link to="/activities">
-          <Button size="sm" variant="outline"><Compass className="mr-1.5 h-4 w-4" />Find Activities</Button>
-        </Link>
-        <Link to="/ai">
-          <Button size="sm" variant="solid" className="bg-aurora/20 text-aurora hover:bg-aurora/30">
-            <Sparkles className="mr-1.5 h-4 w-4" />Yatra AI Travel Assistant
-          </Button>
-        </Link>
-      </div>
     </div>
   );
 }

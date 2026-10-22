@@ -15,6 +15,10 @@ import {
   User,
   Shield,
   LogOut,
+  Sun,
+  Moon,
+  Palette,
+  Compass as GlobeIcon,
   ChevronRight,
   ExternalLink,
 } from 'lucide-react';
@@ -23,6 +27,7 @@ import { ChatDock } from '@/components/ai/ChatDock.jsx';
 import { CommandPalette } from '@/features/command/CommandPalette.jsx';
 import { useAuthStore } from '@/store/useAuthStore.js';
 import { useWorldStore } from '@/store/useWorldStore.js';
+import { useThemeStore } from '@/store/useThemeStore.js';
 import { cn } from '@/lib/utils.js';
 
 export function AppShell() {
@@ -35,13 +40,15 @@ export function AppShell() {
   const trips = useWorldStore((s) => s.trips);
   const primaryTripId = trips[0]?.id || 't_spice';
 
+  const { mode, themeStyle, toggleMode, setThemeStyle } = useThemeStore();
+
   const navGroups = [
     {
       title: 'Navigation',
       items: [
         { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { to: '/trips', label: 'My Trips', icon: Briefcase },
-        { to: '/trips/new', label: 'Create Trip', icon: PlusCircle },
+        { to: '/trips', label: 'My Trips', icon: Briefcase, count: trips.length },
+        { to: '/trips/new', label: 'Plan New Trip', icon: PlusCircle },
       ],
     },
     {
@@ -51,7 +58,7 @@ export function AppShell() {
         { to: `/trips/${primaryTripId}/build`, label: 'Itinerary Builder', icon: SlidersHorizontal },
         { to: `/trips/${primaryTripId}/budget`, label: 'Trip Budget', icon: PieChart },
         { to: `/trips/${primaryTripId}/timeline`, label: 'Calendar / Timeline', icon: Calendar },
-        { to: `/s/spice-route-homecoming`, label: 'Shared Itinerary', icon: Share2, external: false },
+        { to: `/s/spice-route-homecoming`, label: 'Shared Itinerary', icon: Share2 },
       ],
     },
     {
@@ -64,65 +71,92 @@ export function AppShell() {
     {
       title: 'AI & Management',
       items: [
-        { to: '/ai', label: 'Yatra AI Assistant', icon: Sparkles, badge: 'Yatra AI' },
+        { to: '/ai', label: 'Yatra AI Assistant', icon: Sparkles, badge: 'AI Live' },
         { to: '/profile', label: 'Profile & Settings', icon: User },
-        { to: '/admin', label: 'Admin Analytics', icon: Shield },
+        ...(user?.role === 'admin' ? [{ to: '/admin', label: 'Admin Analytics', icon: Shield }] : []),
       ],
     },
   ];
 
   return (
-    <div className="relative min-h-screen bg-ink text-parchment">
+    <div className="relative min-h-screen bg-ink text-parchment transition-colors duration-200">
       <ConstellationBg />
 
       {/* Top Navbar */}
-      <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border/50 bg-ink/80 px-4 backdrop-blur-md md:px-8">
+      <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border/70 bg-surface/90 px-4 backdrop-blur-md md:px-8 shadow-xs">
         <div className="flex items-center gap-3">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="font-display text-2xl font-bold tracking-tight text-saffron">Yatraverse</span>
+          <Link to="/" className="flex items-center gap-2 group">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent text-white shadow-sm font-black text-lg group-hover:scale-105 transition-transform">
+              ✈
+            </div>
+            <span className="font-display text-xl font-bold tracking-tight text-parchment">
+              Yatraverse
+            </span>
           </Link>
-          <span className="hidden text-xs text-muted md:inline">| Complete Multi-City Travel Planner</span>
+          <span className="hidden text-xs text-muted md:inline font-medium">| Intelligent Multi-City Travel Studio</span>
         </div>
 
         {/* Right side controls */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3">
           {/* Quick Jump Dropdown */}
-          <div className="hidden lg:flex items-center gap-1.5 rounded-xl border border-border/60 bg-white/5 px-2.5 py-1 text-xs">
-            <span className="text-muted">Quick Jump:</span>
+          <div className="hidden lg:flex items-center gap-1.5 rounded-xl border border-border/80 bg-surface px-2.5 py-1 text-xs shadow-xs">
+            <span className="text-muted text-[11px] font-medium">Jump:</span>
             <select
               aria-label="Quick Navigation"
               value={loc.pathname}
               onChange={(e) => nav(e.target.value)}
-              className="bg-transparent text-xs text-saffron outline-none cursor-pointer"
+              className="bg-transparent text-xs text-accent font-semibold outline-none cursor-pointer"
             >
-              <option value="/dashboard" className="bg-ink text-parchment">Dashboard</option>
-              <option value="/trips/new" className="bg-ink text-parchment">Create Trip</option>
-              <option value="/trips" className="bg-ink text-parchment">My Trips</option>
-              <option value={`/trips/${primaryTripId}/build`} className="bg-ink text-parchment">Itinerary Builder</option>
-              <option value={`/trips/${primaryTripId}`} className="bg-ink text-parchment">Itinerary View</option>
-              <option value="/cities" className="bg-ink text-parchment">City Search</option>
-              <option value="/activities" className="bg-ink text-parchment">Activity Search</option>
-              <option value={`/trips/${primaryTripId}/budget`} className="bg-ink text-parchment">Trip Budget & Breakdown</option>
-              <option value={`/trips/${primaryTripId}/timeline`} className="bg-ink text-parchment">Calendar & Timeline</option>
-              <option value="/s/spice-route-homecoming" className="bg-ink text-parchment">Shared Itinerary</option>
-              <option value="/profile" className="bg-ink text-parchment">User Profile / Settings</option>
-              <option value="/admin" className="bg-ink text-parchment">Admin Analytics</option>
-              <option value="/ai" className="bg-ink text-parchment">✨ Yatra AI Assistant</option>
-              <option value="/login" className="bg-ink text-parchment">Login / Signup</option>
+              <option value="/dashboard" className="bg-surface text-parchment">Dashboard</option>
+              <option value="/trips/new" className="bg-surface text-parchment">Plan New Trip</option>
+              <option value="/trips" className="bg-surface text-parchment">My Trips</option>
+              <option value={`/trips/${primaryTripId}/build`} className="bg-surface text-parchment">Itinerary Builder</option>
+              <option value={`/trips/${primaryTripId}`} className="bg-surface text-parchment">Itinerary View</option>
+              <option value="/cities" className="bg-surface text-parchment">City Search</option>
+              <option value="/activities" className="bg-surface text-parchment">Activity Search</option>
+              <option value={`/trips/${primaryTripId}/budget`} className="bg-surface text-parchment">Trip Budget</option>
+              <option value={`/trips/${primaryTripId}/timeline`} className="bg-surface text-parchment">Calendar Timeline</option>
+              <option value="/s/spice-route-homecoming" className="bg-surface text-parchment">Shared Itinerary</option>
+              <option value="/profile" className="bg-surface text-parchment">User Profile</option>
+              {user?.role === 'admin' && (
+                <option value="/admin" className="bg-surface text-parchment">Admin Analytics</option>
+              )}
+              <option value="/ai" className="bg-surface text-parchment">✨ Yatra AI Assistant</option>
+              <option value="/login" className="bg-surface text-parchment">Login / Signup</option>
             </select>
           </div>
+
+          {/* Compact High-Contrast Light / Dark Mode Toggle Button */}
+          <button
+            type="button"
+            onClick={toggleMode}
+            className={cn(
+              'flex h-8 w-8 items-center justify-center rounded-xl transition-all duration-200 cursor-pointer select-none shrink-0',
+              mode === 'dark'
+                ? 'bg-amber-400/20 text-amber-300 border border-amber-400/60 hover:bg-amber-400/30 hover:border-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.35)]'
+                : 'bg-amber-50 text-amber-900 border border-amber-400/70 hover:bg-amber-100 shadow-xs'
+            )}
+            title={mode === 'dark' ? 'Switch to Light Mode ☀️' : 'Switch to Dark Mode 🌙'}
+            aria-label="Toggle theme mode"
+          >
+            {mode === 'dark' ? (
+              <Sun className="h-4 w-4 text-amber-400 animate-spin-slow" />
+            ) : (
+              <Moon className="h-4 w-4 text-amber-800" />
+            )}
+          </button>
 
           {/* User mini badge & Profile */}
           <Link
             to="/profile"
-            className="flex items-center gap-2 rounded-xl border border-border/40 bg-white/5 px-2.5 py-1 text-xs hover:border-saffron/50 transition-colors"
+            className="flex items-center gap-2 rounded-xl border border-border/80 bg-surface px-2.5 py-1 text-xs hover:border-accent transition-colors shadow-xs"
           >
             <img
               src={user?.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=256'}
               alt={user?.name || 'User'}
-              className="h-6 w-6 rounded-full object-cover"
+              className="h-6 w-6 rounded-full object-cover ring-1 ring-border"
             />
-            <span className="hidden sm:inline font-medium text-parchment">{user?.name?.split(' ')[0] || 'User'}</span>
+            <span className="hidden sm:inline font-semibold text-parchment">{user?.name?.split(' ')[0] || 'User'}</span>
           </Link>
         </div>
       </header>
@@ -130,36 +164,44 @@ export function AppShell() {
       {/* Main Container */}
       <div className="flex">
         {/* Desktop Sidebar Navigation */}
-        <aside className="no-print hidden md:flex md:w-64 flex-col justify-between border-r border-border/40 bg-ink/60 px-3 py-5 backdrop-blur-md md:h-[calc(100vh-4rem)] md:sticky md:top-16 overflow-y-auto">
+        <aside className="no-print hidden md:flex md:w-64 flex-col justify-between border-r border-border/80 bg-surface/75 px-3 py-5 backdrop-blur-md md:h-[calc(100vh-4rem)] md:sticky md:top-16 overflow-y-auto">
           <div className="space-y-6">
             {navGroups.map((grp) => (
               <div key={grp.title}>
-                <p className="px-3 font-mono text-[10px] font-semibold uppercase tracking-widest text-muted">
+                <p className="px-3 font-mono text-[10px] font-bold uppercase tracking-wider text-muted">
                   {grp.title}
                 </p>
                 <div className="mt-2 space-y-1">
-                  {grp.items.map(({ to, label, icon: Icon, badge }) => {
+                  {grp.items.map(({ to, label, icon: Icon, badge, count }) => {
                     const isActive = loc.pathname === to || (to !== '/trips' && to !== '/dashboard' && loc.pathname.startsWith(to));
                     return (
                       <NavLink
                         key={to}
                         to={to}
                         className={cn(
-                          'flex items-center justify-between rounded-xl px-3 py-2 text-sm font-medium transition-all',
+                          'relative flex items-center justify-between rounded-xl px-3.5 py-2 text-sm font-medium transition-all duration-200 group overflow-hidden',
                           isActive
-                            ? 'bg-saffron/20 text-saffron font-semibold border-l-2 border-saffron'
-                            : 'text-muted hover:bg-white/5 hover:text-parchment'
+                            ? 'bg-accent/15 text-accent font-bold border-l-4 border-accent shadow-xs translate-x-1'
+                            : 'text-muted hover:text-parchment hover:bg-surface hover:translate-x-1.5 hover:shadow-xs hover:border-l-3 hover:border-accent/80'
                         )}
                       >
                         <div className="flex items-center gap-2.5">
-                          <Icon className="h-4 w-4 shrink-0" />
-                          <span>{label}</span>
+                          <Icon className={cn('h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-115 group-hover:text-accent', isActive ? 'text-accent' : 'text-muted')} />
+                          <span className="transition-colors">{label}</span>
                         </div>
-                        {badge && (
-                          <span className="rounded bg-aurora/20 px-1.5 py-0.2 font-mono text-[10px] text-aurora">
-                            {badge}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1.5">
+                          {badge && (
+                            <span className="rounded-md bg-accent/20 px-1.5 py-0.5 font-mono text-[10px] text-accent font-semibold">
+                              {badge}
+                            </span>
+                          )}
+                          {count !== undefined && (
+                            <span className="rounded-full bg-border/60 px-2 py-0.5 text-[11px] text-muted font-mono group-hover:bg-accent/20 group-hover:text-accent transition-colors">
+                              {count}
+                            </span>
+                          )}
+                          <ChevronRight className="h-3.5 w-3.5 text-muted opacity-0 -translate-x-1 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0 group-hover:text-accent" />
+                        </div>
                       </NavLink>
                     );
                   })}
@@ -168,12 +210,34 @@ export function AppShell() {
             ))}
           </div>
 
-          <div className="mt-6 border-t border-border/40 pt-4">
+          <div className="mt-6 border-t border-border/70 pt-4 space-y-2">
+            <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-surface/50 border border-border/50 text-xs">
+              <div className="flex items-center gap-2 overflow-hidden">
+                <img
+                  src={user?.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=256'}
+                  alt={user?.name || 'User'}
+                  className="h-7 w-7 rounded-full object-cover shrink-0"
+                />
+                <div className="truncate text-left">
+                  <p className="font-semibold text-parchment truncate">{user?.name || 'Demo Traveller'}</p>
+                  <p className="text-[10px] text-muted truncate">{user?.email || 'demo@yatraverse.app'}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => logout()}
+                className="text-muted hover:text-coral transition-colors p-1"
+                title="Sign Out"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
+
             <Link
               to="/login"
-              className="flex items-center justify-between rounded-xl px-3 py-2 text-xs text-muted hover:bg-white/5 hover:text-parchment"
+              className="flex items-center justify-between rounded-xl px-3 py-1.5 text-xs text-muted hover:bg-white/5 hover:text-parchment"
             >
-              <span>Login / Sign Up</span>
+              <span>Switch Account</span>
               <ExternalLink className="h-3 w-3" />
             </Link>
           </div>

@@ -7,7 +7,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -26,6 +26,10 @@ model User {
   updatedAt    DateTime           @updatedAt
   trips        Trip[]
   savedCities  SavedDestination[]
+  memberships  TripMember[]
+  votes        Vote[]
+  paidExpenses Expense[]          @relation("ExpensePayer")
+  splits       ExpenseSplit[]
 }
 
 model City {
@@ -58,6 +62,7 @@ model Activity {
   description    String
   image          String
   stopActivities StopActivity[]
+  votes          Vote[]
 }
 
 model Trip {
@@ -77,6 +82,8 @@ model Trip {
   updatedAt   DateTime      @updatedAt
   stops       Stop[]
   expenses    Expense[]
+  members     TripMember[]
+  votes       Vote[]
 }
 
 model Stop {
@@ -92,27 +99,34 @@ model Stop {
 }
 
 model StopActivity {
-  id           String   @id @default(uuid())
+  id           String        @id @default(uuid())
   stopId       String
-  stop         Stop     @relation(fields: [stopId], references: [id], onDelete: Cascade)
+  stop         Stop          @relation(fields: [stopId], references: [id], onDelete: Cascade)
   activityId   String
-  activity     Activity @relation(fields: [activityId], references: [id])
+  activity     Activity      @relation(fields: [activityId], references: [id])
   dayDate      String
   startTime    String
   notes        String?
   costOverride Float?
-  orderIndex   Int      @default(0)
+  orderIndex   Int           @default(0)
+  votes        Vote[]
+  expenses     Expense[]
 }
 
 model Expense {
-  id       String @id @default(uuid())
-  tripId   String
-  trip     Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  category String
-  amount   Float
-  currency String @default("INR")
-  notes    String?
-  date     String
+  id             String         @id @default(uuid())
+  tripId         String
+  trip           Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  category       String
+  amount         Float
+  currency       String         @default("INR")
+  notes          String?
+  date           String
+  paidById       String?
+  paidBy         User?          @relation("ExpensePayer", fields: [paidById], references: [id])
+  stopActivityId String?
+  stopActivity   StopActivity?  @relation(fields: [stopActivityId], references: [id])
+  splits         ExpenseSplit[]
 }
 
 model SavedDestination {
@@ -124,4 +138,45 @@ model SavedDestination {
   createdAt DateTime @default(now())
 
   @@unique([userId, cityId])
+}
+
+model TripMember {
+  id        String   @id @default(uuid())
+  tripId    String
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String   @default("member")
+  joinedAt  DateTime @default(now())
+
+  @@unique([tripId, userId])
+}
+
+model Vote {
+  id             String        @id @default(uuid())
+  tripId         String
+  trip           Trip          @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  stopActivityId String?
+  stopActivity   StopActivity? @relation(fields: [stopActivityId], references: [id], onDelete: Cascade)
+  activityId     String
+  activity       Activity      @relation(fields: [activityId], references: [id])
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  value          Int           // +1 for upvote 👍, -1 for downvote 👎
+  createdAt      DateTime      @default(now())
+
+  @@unique([tripId, stopActivityId, userId])
+}
+
+model ExpenseSplit {
+  id        String    @id @default(uuid())
+  expenseId String
+  expense   Expense   @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  share     Float
+  isSettled Boolean   @default(false)
+  settledAt DateTime?
+
+  @@unique([expenseId, userId])
 }

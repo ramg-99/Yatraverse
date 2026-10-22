@@ -1,11 +1,16 @@
 import { useEffect, useRef } from 'react';
+import { useThemeStore } from '@/store/useThemeStore.js';
 
 const STARS = 70;
 
 export function ConstellationBg() {
   const ref = useRef(null);
+  const themeStyle = useThemeStore((s) => s.themeStyle);
+  const mode = useThemeStore((s) => s.mode);
 
   useEffect(() => {
+    if (themeStyle !== 'classic') return;
+
     const canvas = ref.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -32,7 +37,7 @@ export function ConstellationBg() {
     };
     const draw = () => {
       ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = 'rgba(246,241,231,0.7)';
+      ctx.fillStyle = mode === 'light' ? 'rgba(15,23,42,0.4)' : 'rgba(246,241,231,0.7)';
       stars.forEach((s) => {
         const px = s.x * w + (mouse.x - 0.5) * 18;
         const py = s.y * h + (mouse.y - 0.5) * 18;
@@ -40,7 +45,7 @@ export function ConstellationBg() {
         ctx.arc(px, py, s.r * devicePixelRatio, 0, Math.PI * 2);
         ctx.fill();
       });
-      ctx.strokeStyle = 'rgba(45,212,191,0.18)';
+      ctx.strokeStyle = mode === 'light' ? 'rgba(2,132,199,0.12)' : 'rgba(45,212,191,0.18)';
       ctx.lineWidth = 1;
       for (let i = 0; i < stars.length; i += 1) {
         for (let j = i + 1; j < stars.length; j += 1) {
@@ -65,7 +70,26 @@ export function ConstellationBg() {
       window.removeEventListener('resize', resize);
       window.removeEventListener('pointermove', onMove);
     };
-  }, []);
+  }, [themeStyle, mode]);
+
+  if (themeStyle === 'modern') {
+    return (
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden>
+        {mode === 'light' ? (
+          <>
+            <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-sky-200/40 via-teal-100/30 to-transparent blur-3xl" />
+            <div className="absolute top-1/2 -left-40 h-[600px] w-[600px] rounded-full bg-gradient-to-tr from-indigo-100/30 via-sky-100/20 to-transparent blur-3xl" />
+          </>
+        ) : (
+          <>
+            <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-sky-500/10 via-cyan-500/5 to-transparent blur-3xl" />
+            <div className="absolute top-1/2 -left-40 h-[600px] w-[600px] rounded-full bg-gradient-to-tr from-blue-600/10 via-teal-500/5 to-transparent blur-3xl" />
+          </>
+        )}
+      </div>
+    );
+  }
 
   return <canvas ref={ref} className="pointer-events-none fixed inset-0 z-0 opacity-40" aria-hidden />;
 }
+

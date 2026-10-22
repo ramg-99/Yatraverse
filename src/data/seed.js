@@ -1,7 +1,7 @@
 import { users } from './users.js';
 import { cities } from './cities.js';
 import { activities } from './activities.js';
-import { trips, stops, stopActivities, expenses, savedDestinations } from './trips.js';
+import { trips, stops, stopActivities, expenses, savedDestinations, tripMembers, votes, expenseSplits } from './trips.js';
 
 export function createSeed() {
   return {
@@ -12,6 +12,9 @@ export function createSeed() {
     stops: structuredClone(stops),
     stopActivities: structuredClone(stopActivities),
     expenses: structuredClone(expenses),
+    tripMembers: structuredClone(tripMembers),
+    votes: structuredClone(votes),
+    expenseSplits: structuredClone(expenseSplits),
     savedDestinations: structuredClone(savedDestinations),
     badges: [
       { id: 'b_cities5', label: '5 Cities', hint: 'Plan five cities in one universe' },

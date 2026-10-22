@@ -3,6 +3,55 @@
 @tailwind utilities;
 
 :root {
+  /* Default: Modern Light (Crisp, Clean Travel Portal Theme) */
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --card: #ffffff;
+  --accent: #0284c7;
+  --aurora: #0d9488;
+  --coral: #ef4444;
+  --text: #0f172a;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --ring: #0284c7;
+  --glass-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+}
+
+/* Modern Theme - Light Mode */
+.theme-modern.light,
+.light:not(.theme-classic) {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --card: #ffffff;
+  --accent: #d97706; /* Rich amber/saffron */
+  --aurora: #0d9488;
+  --coral: #ef4444;
+  --text: #0f172a;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --ring: #d97706;
+  --glass-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+}
+
+/* Modern Theme - Dark Mode (Warm Yellow / Saffron Accent) */
+.theme-modern.dark,
+.dark:not(.theme-classic) {
+  --bg: #090d16;
+  --surface: #0f172a;
+  --card: #131d2e;
+  --accent: #f59e0b; /* Golden Yellow / Saffron */
+  --aurora: #10b981;
+  --coral: #f87171;
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  --border: #1e293b;
+  --ring: #f59e0b;
+  --glass-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.5);
+}
+
+/* Classic Cosmos Theme - Dark Mode (Original) */
+.theme-classic.dark,
+.theme-classic:not(.light) {
   --bg: #0b1020;
   --surface: #151b3b;
   --accent: #ffb02e;
@@ -13,9 +62,11 @@
   --border: rgba(246, 241, 231, 0.12);
   --card: rgba(21, 27, 59, 0.72);
   --ring: #ffb02e;
+  --glass-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
 }
 
-.light {
+/* Classic Cosmos Theme - Light Mode */
+.theme-classic.light {
   --bg: #f6f1e7;
   --surface: #efe6d4;
   --accent: #c48412;
@@ -26,7 +77,9 @@
   --border: rgba(21, 27, 59, 0.12);
   --card: rgba(255, 252, 246, 0.82);
   --ring: #c48412;
+  --glass-shadow: 0 10px 25px rgba(21, 27, 59, 0.08);
 }
+
 
 html,
 body,
@@ -42,10 +95,55 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-h1,
-h2,
-h3,
-.font-display {
+/* Custom Sleek Scrollbars - Eliminates OS white gutter and button arrows */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent !important;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
+}
+
+/* Typography adapts according to selected theme */
+.theme-modern h1,
+.theme-modern h2,
+.theme-modern h3,
+.theme-modern .font-display,
+:not(.theme-classic) .font-display {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+.theme-classic h1,
+.theme-classic h2,
+.theme-classic h3,
+.theme-classic .font-display {
   font-family: Fraunces, Georgia, serif;
 }
 
@@ -54,24 +152,81 @@ h3,
   outline-offset: 3px;
 }
 
-/* High-contrast inputs with clear black font */
+/* Universal Inputs, Textareas, Selects & Options */
 input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
 textarea,
-#citySelect,
-#schedTime,
-select.form-select {
-  color: #000000 !important;
+select {
+  color: var(--text) !important;
+  background-color: var(--surface) !important;
+  border-color: var(--border) !important;
+}
+
+select option {
+  color: var(--text) !important;
+  background-color: var(--surface) !important;
+}
+
+/* Explicit Light Mode Overrides for 100% Contrast & Legibility */
+.light input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+.light textarea,
+.light select,
+.light select option {
+  color: #0f172a !important;
   background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+}
+
+.light input::placeholder,
+.light textarea::placeholder {
+  color: #64748b !important;
+  opacity: 1 !important;
+}
+
+.light .text-parchment {
+  color: #0f172a !important;
+}
+
+.light .text-muted {
+  color: #475569 !important;
+}
+
+.light .bg-white\/5 {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+  color: #334155 !important;
+}
+
+.light .bg-white\/10 {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+.light .bg-ink\/60,
+.light .bg-ink\/80,
+.light .bg-ink\/90 {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+.light .border-white\/10,
+.light .border-white\/20,
+.light .border-white\/30 {
+  border-color: #e2e8f0 !important;
 }
 
 input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file'])::placeholder,
 textarea::placeholder {
-  color: #6b7280 !important;
-  opacity: 1 !important;
+  color: var(--muted) !important;
+  opacity: 0.8 !important;
 }
 
 select option {
-  color: #000000 !important;
+  color: var(--text) !important;
+  background-color: var(--surface) !important;
+}
+
+.light select option {
+  color: #0f172a !important;
   background-color: #ffffff !important;
 }
 
@@ -82,9 +237,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 .glass {
   background: var(--card);
-  backdrop-filter: blur(18px);
+  backdrop-filter: blur(16px);
   border: 1px solid var(--border);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--aurora) 18%, transparent), 0 18px 40px rgba(0, 0, 0, 0.22);
+  box-shadow: var(--glass-shadow);
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .grain::before {

@@ -9,6 +9,7 @@ import { convert } from '@/lib/fx.js';
 import { money } from '@/lib/utils.js';
 import { onImgError } from '@/lib/image.js';
 import { Button } from '@/components/ui/button.jsx';
+import { SettleUpTab } from '@/components/collaboration/SettleUpTab.jsx';
 
 const PieChart = lazy(() => import('recharts').then((m) => ({ default: m.PieChart })));
 const Pie = lazy(() => import('recharts').then((m) => ({ default: m.Pie })));
@@ -32,6 +33,7 @@ export default function TripBudgetPage() {
   const currency = useSettingsStore((s) => s.currency);
   const setCurrency = useSettingsStore((s) => s.setCurrency);
   const [stayReduction, setStayReduction] = useState(0);
+  const [activeBudgetTab, setActiveBudgetTab] = useState('radar'); // 'radar' | 'settle'
 
   const spend = useMemo(
     () => (trip ? spendFor(trip.id) : { byCat: {}, total: 0, cityBreakdown: [] }),
@@ -125,9 +127,49 @@ export default function TripBudgetPage() {
         </div>
       </div>
 
-      {/* Overbudget Alert Banner */}
-      {isOverBudget ? (
-        <div className="flex items-start gap-3 rounded-2xl border border-coral/40 bg-coral/10 p-4 text-coral">
+      {/* Primary Tab Navigation: Radar & Allocations vs Settle Up & Splits */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-border/50 pb-2">
+        <button
+          type="button"
+          onClick={() => setActiveBudgetTab('radar')}
+          className={`flex items-center gap-2 rounded-2xl px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
+            activeBudgetTab === 'radar'
+              ? 'bg-saffron text-slate-950 shadow-glow'
+              : 'text-muted hover:text-parchment hover:bg-white/5 border border-border/50'
+          }`}
+        >
+          <BarChart3 className="h-4 w-4" />
+          <span>Radar & Allocations</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveBudgetTab('settle')}
+          className={`flex items-center gap-2 rounded-2xl px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
+            activeBudgetTab === 'settle'
+              ? 'bg-saffron text-slate-950 shadow-glow'
+              : 'text-muted hover:text-parchment hover:bg-white/5 border border-border/50'
+          }`}
+        >
+          <Receipt className="h-4 w-4" />
+          <span>🤝 Settle Up & Auto Splits</span>
+          <span className="rounded-full bg-aurora/20 px-2 py-0.5 font-mono text-[9px] font-bold text-aurora">
+            Crew Live
+          </span>
+        </button>
+      </div>
+
+      {/* Settle Up Tab Content */}
+      {activeBudgetTab === 'settle' && (
+        <SettleUpTab tripId={trip.id} />
+      )}
+
+      {/* Radar & Allocations Content */}
+      {activeBudgetTab === 'radar' && (
+        <>
+          {/* Overbudget Alert Banner */}
+          {isOverBudget ? (
+            <div className="flex items-start gap-3 rounded-2xl border border-coral/40 bg-coral/10 p-4 text-coral">
           <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
           <div className="text-xs space-y-1">
             <p className="font-semibold text-sm">Overbudget Alert Flagged</p>
@@ -386,6 +428,8 @@ export default function TripBudgetPage() {
           </div>
         )}
       </div>
+        </>
+      )}
 
       {/* Action links */}
       <div className="flex gap-3 text-xs">

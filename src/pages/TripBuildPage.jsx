@@ -21,6 +21,8 @@ import {
   ArrowDown,
   ChevronRight,
   List as ListIcon,
+  Users,
+  ThumbsUp,
 } from 'lucide-react';
 import { useWorldStore } from '@/store/useWorldStore.js';
 import { addStop, removeStop, addStopActivity, removeStopActivity, reorderStops, updateTrip } from '@/services/trips.js';
@@ -30,6 +32,9 @@ import { pointsFor, spendFor } from '@/lib/tripView.js';
 import { money } from '@/lib/utils.js';
 import { onImgError } from '@/lib/image.js';
 import { TripOptimizerModal } from '@/features/ai/TripOptimizerModal.jsx';
+import { VotesBadge } from '@/components/collaboration/VotesBadge.jsx';
+import { GroupInviteModal } from '@/components/collaboration/GroupInviteModal.jsx';
+import { AiConsensusModal } from '@/components/collaboration/AiConsensusModal.jsx';
 
 const TripMap = lazy(() => import('@/components/map/TripMap.jsx').then((m) => ({ default: m.TripMap })));
 
@@ -163,14 +168,21 @@ function SortableStop({ stop, index, total, city, activities, onAssignAct, onRem
                       </p>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => removeAct(sa.id)}
-                    className="p-1 text-muted hover:text-coral transition-colors ml-2"
-                    title="Remove activity"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <VotesBadge
+                      tripId={stop.trip_id}
+                      stopActivityId={sa.id}
+                      activityId={sa.activity_id}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeAct(sa.id)}
+                      className="p-1 text-muted hover:text-coral transition-colors ml-1"
+                      title="Remove activity"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -192,8 +204,12 @@ export default function TripBuildPage() {
   const [start, setStart] = useState(trip?.start_date || '');
   const [end, setEnd] = useState(trip?.end_date || '');
   const [showOptimizer, setShowOptimizer] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showConsensusModal, setShowConsensusModal] = useState(false);
   const [assigningStop, setAssigningStop] = useState(null);
   const [selectedTime, setSelectedTime] = useState('10:00');
+
+  const tripMembers = (world.tripMembers || []).filter((m) => m.trip_id === id);
 
   const points = useMemo(() => pointsFor(id), [id, world.stops]);
 
@@ -348,14 +364,34 @@ export default function TripBuildPage() {
 
         {/* Quick Nav Tabs */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Group Crew & Join Link */}
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-saffron/50 text-saffron hover:bg-saffron/10 font-bold shadow-xs"
+            onClick={() => setShowInviteModal(true)}
+          >
+            <Users className="mr-1.5 h-3.5 w-3.5" /> Crew ({tripMembers.length})
+          </Button>
+
+          {/* AI Consensus Resolver */}
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-aurora/50 text-aurora hover:bg-aurora/10 font-bold shadow-xs"
+            onClick={() => setShowConsensusModal(true)}
+          >
+            <Sparkles className="mr-1.5 h-3.5 w-3.5 text-aurora" /> AI Consensus Resolver
+          </Button>
+
           <Link to={`/trips/${id}`}>
             <Button size="sm" variant="solid">
-              <Eye className="mr-1.5 h-3.5 w-3.5" /> View Itinerary
+              <Eye className="mr-1.5 h-3.5 w-3.5" /> View
             </Button>
           </Link>
           <Link to={`/trips/${id}/budget`}>
             <Button size="sm" variant="outline">
-              <PieChart className="mr-1.5 h-3.5 w-3.5" /> Budget
+              <PieChart className="mr-1.5 h-3.5 w-3.5" /> Budget & Splits
             </Button>
           </Link>
           <Link to={`/trips/${id}/timeline`}>
@@ -900,6 +936,20 @@ export default function TripBuildPage() {
       {showOptimizer && (
         <TripOptimizerModal trip={trip} onClose={() => setShowOptimizer(false)} />
       )}
+
+      {/* Group Invite & Crew Modal */}
+      <GroupInviteModal
+        isOpen={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        trip={trip}
+      />
+
+      {/* AI Group Consensus Resolver Modal */}
+      <AiConsensusModal
+        isOpen={showConsensusModal}
+        onClose={() => setShowConsensusModal(false)}
+        tripId={id}
+      />
     </div>
   );
 }

@@ -26,14 +26,20 @@ import {
   Clock,
   Layers,
   ChevronDown,
+  ChevronLeft,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button.jsx';
 import { ConstellationBg } from '@/components/layout/ConstellationBg.jsx';
 import { BoardingPassCard } from '@/components/trip/BoardingPassCard.jsx';
 import { useAuthStore } from '@/store/useAuthStore.js';
+import { useThemeStore } from '@/store/useThemeStore.js';
+import { cn } from '@/lib/utils.js';
 import { trips } from '@/data/trips.js';
 import { cities } from '@/data/cities.js';
+import { onImgError } from '@/lib/image.js';
 
 const Globe = lazy(() => import('@/components/map/Globe.jsx').then((m) => ({ default: m.Globe })));
 
@@ -164,6 +170,8 @@ export default function LandingPage() {
     setNewsletterEmail('');
   };
 
+  const { mode, toggleMode } = useThemeStore();
+
   const copyDemoCreds = () => {
     navigator.clipboard?.writeText('demo@yatraverse.app / demo1234');
     toast.info('Copied Demo Credentials: demo@yatraverse.app / demo1234');
@@ -172,32 +180,6 @@ export default function LandingPage() {
   return (
     <div className="relative min-h-screen bg-ink text-parchment selection:bg-saffron/30 selection:text-white">
       <ConstellationBg />
-
-      {/* TOP ANNOUNCEMENT TICKER */}
-      <div className="relative z-20 border-b border-border/40 bg-surface/80 px-4 py-2 text-xs backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center rounded-full bg-saffron/20 px-2 py-0.5 font-mono text-[10px] font-semibold text-saffron">
-              BUILDATHON 2.0 LIVE
-            </span>
-            <span className="hidden text-muted md:inline">
-              Explore the next-gen AI boarding pass & multi-city travel atlas.
-            </span>
-          </div>
-          <div className="flex items-center gap-4 text-muted">
-            <button
-              onClick={copyDemoCreds}
-              className="inline-flex items-center gap-1 transition-colors hover:text-saffron"
-              title="Click to copy demo credentials"
-            >
-              <Zap className="h-3 w-3 text-saffron" />
-              <span>Demo: demo@yatraverse.app</span>
-            </button>
-            <span className="hidden sm:inline">|</span>
-            <span className="hidden sm:inline font-mono text-[11px] text-aurora">Currency: INR (₹)</span>
-          </div>
-        </div>
-      </div>
 
       {/* MAIN HEADER / MEGA NAVBAR */}
       <header className="sticky top-0 z-40 border-b border-border/40 bg-ink/80 backdrop-blur-xl">
@@ -217,80 +199,122 @@ export default function LandingPage() {
             </div>
           </Link>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden items-center gap-7 lg:flex">
-            <a href="#search-bar" className="text-sm font-medium text-muted transition-colors hover:text-parchment">
+          {/* Desktop Navigation Links - Single line with generous hover & active feedback */}
+          <nav className="hidden items-center gap-1 xl:gap-2 lg:flex shrink-0">
+            <a
+              href="#search-bar"
+              className="whitespace-nowrap px-3.5 py-1.5 rounded-xl text-sm font-semibold text-muted hover:text-saffron hover:bg-white/5 transition-all duration-200"
+            >
               Plan Orbit
             </a>
-            <a href="#destinations" className="text-sm font-medium text-muted transition-colors hover:text-parchment">
-              Destinations
-            </a>
-            <a href="#curated-orbits" className="text-sm font-medium text-muted transition-colors hover:text-parchment">
+            <a
+              href="#curated-orbits"
+              className="whitespace-nowrap px-3.5 py-1.5 rounded-xl text-sm font-semibold text-muted hover:text-saffron hover:bg-white/5 transition-all duration-200"
+            >
               Curated Routes
             </a>
-            <a href="#boarding-pass-demo" className="text-sm font-medium text-muted transition-colors hover:text-parchment">
-              Live Boarding Pass
+            <a
+              href="#boarding-pass-demo"
+              className="whitespace-nowrap px-3.5 py-1.5 rounded-xl text-sm font-semibold text-muted hover:text-saffron hover:bg-white/5 transition-all duration-200"
+            >
+              Live Pass
             </a>
-            <a href="#how-it-works" className="text-sm font-medium text-muted transition-colors hover:text-parchment">
+            <a
+              href="#destinations"
+              className="whitespace-nowrap px-3.5 py-1.5 rounded-xl text-sm font-semibold text-muted hover:text-saffron hover:bg-white/5 transition-all duration-200"
+            >
+              Star Hubs
+            </a>
+            <a
+              href="#how-it-works"
+              className="whitespace-nowrap px-3.5 py-1.5 rounded-xl text-sm font-semibold text-muted hover:text-saffron hover:bg-white/5 transition-all duration-200"
+            >
               How It Works
             </a>
           </nav>
 
-          {/* Action CTAs */}
-          <div className="flex items-center gap-2.5 sm:gap-3">
-            <Link to="/login">
-              <Button variant="ghost" size="sm" className="hidden text-sm sm:inline-flex">
+          {/* Action CTAs - Decongested, high-contrast, strictly single line */}
+          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+            <Link to="/login" className="shrink-0 hidden sm:inline-block">
+              <span className="whitespace-nowrap px-3.5 py-2 text-sm font-semibold rounded-xl text-muted hover:text-parchment hover:bg-white/5 transition-colors">
                 Sign In
-              </Button>
+              </span>
             </Link>
-            <Button
-              variant="outline"
-              size="sm"
+
+            <button
+              type="button"
               onClick={() => {
                 loginDemoTraveller();
                 navigate('/dashboard');
               }}
-              className="border-saffron/40 text-saffron hover:bg-saffron/10"
+              className="whitespace-nowrap px-4 py-2 text-sm font-semibold rounded-xl border border-saffron/50 text-saffron hover:bg-saffron/15 hover:border-saffron hover:shadow-[0_0_15px_rgba(251,191,36,0.25)] active:scale-95 transition-all cursor-pointer shrink-0"
             >
               Demo Traveller
-            </Button>
-            <Link to="/signup">
-              <Button size="sm" className="bg-saffron text-ink font-semibold shadow-glow hover:bg-saffron/90">
+            </button>
+
+            <Link to="/signup" className="shrink-0">
+              <button
+                type="button"
+                className="whitespace-nowrap px-5 py-2 text-sm font-extrabold rounded-xl bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 text-slate-950 shadow-[0_0_20px_rgba(251,191,36,0.45)] hover:shadow-[0_0_28px_rgba(251,191,36,0.65)] hover:brightness-105 active:scale-95 transition-all cursor-pointer"
+              >
                 Stamp Passport
-              </Button>
+              </button>
             </Link>
+
+            {/* Small Mode Toggle Button in the far right corner */}
+            <button
+              type="button"
+              onClick={toggleMode}
+              className={cn(
+                'flex h-8 w-8 items-center justify-center rounded-xl transition-all duration-200 cursor-pointer select-none shrink-0',
+                mode === 'dark'
+                  ? 'bg-amber-400/20 text-amber-300 border border-amber-400/60 hover:bg-amber-400/30 hover:border-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.35)]'
+                  : 'bg-amber-50 text-amber-900 border border-amber-400/70 hover:bg-amber-100 shadow-xs'
+              )}
+              title={mode === 'dark' ? 'Switch to Light Mode ☀️' : 'Switch to Dark Mode 🌙'}
+              aria-label="Toggle theme mode"
+            >
+              {mode === 'dark' ? (
+                <Sun className="h-4 w-4 text-amber-400 animate-spin-slow" />
+              ) : (
+                <Moon className="h-4 w-4 text-amber-800" />
+              )}
+            </button>
           </div>
         </div>
       </header>
 
-      {/* HERO SECTION */}
-      <section className="relative z-10 mx-auto max-w-7xl px-4 pt-12 pb-16 sm:px-6 md:pt-20 md:pb-24">
-        <div className="grid items-center gap-12 lg:grid-cols-12">
+      {/* 1. HERO SECTION WITH 3D ROTATING GLOBE */}
+      <section className="relative z-10 mx-auto max-w-7xl px-4 pt-10 pb-12 sm:px-6 md:pt-16 md:pb-16">
+        <div className="grid items-center gap-10 lg:grid-cols-12">
           {/* Left Text / Value Prop */}
-          <div className="lg:col-span-7">
-            <div className="inline-flex items-center gap-2 rounded-full border border-aurora/30 bg-aurora/10 px-3.5 py-1 text-xs text-aurora">
+          <div className="lg:col-span-7 space-y-5">
+            <div className="inline-flex items-center gap-2 rounded-full border border-saffron/40 bg-saffron/15 px-3.5 py-1 text-xs font-semibold text-saffron">
               <Sparkles className="h-3.5 w-3.5" />
               <span className="font-mono uppercase tracking-wider">Multi-City AI Trajectory Engine</span>
             </div>
 
-            <h1 className="mt-4 font-display text-4xl font-extrabold leading-[1.12] sm:text-5xl md:text-6xl">
+            <h1 className="font-display text-4xl font-extrabold leading-[1.12] sm:text-5xl md:text-6xl text-parchment">
               Cities as stars. <br />
-              <span className="bg-gradient-to-r from-saffron via-coral to-aurora bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-saffron via-amber-300 to-aurora bg-clip-text text-transparent">
                 Trips as constellations.
               </span>
             </h1>
 
-            <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted sm:text-lg">
+            <p className="max-w-2xl text-base leading-relaxed text-muted sm:text-lg">
               The premier boarding-pass planner for wanderers charting multiple horizons. Turn wanderlust into real,
               budget-optimized flight orbits, interactive 3D globes, and collectible digital passport stamps.
             </p>
 
-            <div className="mt-8 flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3 pt-2">
               <Link to="/signup">
-                <Button size="lg" className="bg-saffron text-ink font-semibold shadow-glow hover:bg-saffron/90">
-                  Begin the Atlas
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-full px-6 py-3 font-bold text-sm bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 text-slate-950 shadow-[0_0_20px_rgba(251,191,36,0.5)] border-2 border-amber-200 hover:brightness-105 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+                >
+                  <span>Begin the Atlas</span>
+                  <ArrowRight className="h-4 w-4 stroke-[2.5]" />
+                </button>
               </Link>
               <Button
                 size="lg"
@@ -299,14 +323,14 @@ export default function LandingPage() {
                   loginDemoTraveller();
                   navigate('/dashboard');
                 }}
-                className="border-white/20 bg-surface/40 hover:bg-surface text-saffron hover:text-saffron"
+                className="border-border/80 bg-surface/50 hover:bg-surface text-saffron hover:text-saffron shadow-xs font-semibold"
               >
                 Demo Traveller (1-Click)
               </Button>
             </div>
 
             {/* Social Trust Metrics */}
-            <div className="mt-10 flex flex-wrap items-center gap-6 border-t border-border/40 pt-6 text-sm text-muted">
+            <div className="flex flex-wrap items-center gap-6 border-t border-border/40 pt-6 text-sm text-muted">
               <div className="flex items-center gap-2">
                 <div className="flex -space-x-2">
                   <img
@@ -327,44 +351,44 @@ export default function LandingPage() {
                 </div>
                 <span>4.95/5 Rating by 2,400+ Explorers</span>
               </div>
-              <div className="flex items-center gap-1.5 text-aurora">
+              <div className="flex items-center gap-1.5 text-aurora font-medium">
                 <ShieldCheck className="h-4 w-4" />
-                <span>Zero Latency Offline Storage</span>
+                <span>Verified Cloud Sync</span>
               </div>
             </div>
           </div>
 
-          {/* Right Interactive 3D Globe + Orbit Badge */}
+          {/* Right Interactive 3D Globe + Orbit Badges */}
           <div className="relative flex justify-center lg:col-span-5">
-            <div className="relative flex h-[380px] w-full max-w-[420px] items-center justify-center rounded-3xl border border-white/10 bg-surface/30 p-4 shadow-glass backdrop-blur-md">
+            <div className="relative flex h-[380px] w-full max-w-[420px] items-center justify-center rounded-3xl border border-border/70 bg-surface/40 p-4 shadow-glass backdrop-blur-md">
               <Suspense fallback={<div className="h-64 w-64 animate-pulse rounded-full bg-surface" />}>
                 <Globe className="h-[320px] w-[320px]" />
               </Suspense>
 
-              {/* Floating Floating Info Cards */}
+              {/* Floating Info Cards */}
               <motion.div
                 animate={{ y: [0, -8, 0] }}
                 transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute top-4 left-4 rounded-xl border border-saffron/30 bg-ink/90 p-3 shadow-lg backdrop-blur-md"
+                className="absolute top-4 left-4 rounded-xl border border-saffron/40 bg-surface/90 px-3 py-2 shadow-lg backdrop-blur-md"
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <div className="h-2 w-2 rounded-full bg-saffron animate-ping" />
-                  <span className="font-mono text-xs font-semibold text-saffron">ACTIVE ORBIT</span>
+                  <span className="font-mono text-xs font-bold text-saffron">ACTIVE ORBIT</span>
                 </div>
-                <p className="mt-1 text-xs text-parchment font-medium">BOM ➔ TYO ➔ PAR</p>
+                <p className="mt-0.5 text-xs text-parchment font-semibold">BOM ➔ TYO ➔ PAR</p>
                 <p className="text-[10px] text-muted">Estimated Burn: ₹2,14,000</p>
               </motion.div>
 
               <motion.div
                 animate={{ y: [0, 8, 0] }}
                 transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-                className="absolute bottom-4 right-4 rounded-xl border border-aurora/30 bg-ink/90 p-3 shadow-lg backdrop-blur-md"
+                className="absolute bottom-4 right-4 rounded-xl border border-aurora/40 bg-surface/90 px-3 py-2 shadow-lg backdrop-blur-md"
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <CheckCircle2 className="h-3.5 w-3.5 text-aurora" />
-                  <span className="font-mono text-xs font-semibold text-aurora">PASSPORT STAMPED</span>
+                  <span className="font-mono text-xs font-bold text-aurora">PASSPORT STAMPED</span>
                 </div>
-                <p className="mt-1 text-xs text-parchment font-medium">Shibuya Night Walk Unlocked</p>
+                <p className="mt-0.5 text-xs text-parchment font-semibold">Shibuya Night Walk Unlocked</p>
                 <p className="text-[10px] text-muted">Tokyo Constellation Node</p>
               </motion.div>
             </div>
@@ -372,103 +396,79 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ECOMMERCE TRIP SEARCH & BOOKING ENGINE WIDGET */}
-      <section id="search-bar" className="relative z-20 mx-auto -mt-6 max-w-6xl px-4 sm:px-6">
-        <div className="rounded-2xl border border-border/70 bg-surface/90 p-5 shadow-2xl backdrop-blur-2xl sm:p-7">
-          {/* Search Tabs */}
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/40 pb-4">
-            <div className="flex items-center gap-2">
+      {/* 2. SEGMENTED TRAVEL CONSOLE SEARCH BAR */}
+      <section id="search-bar" className="relative z-20 mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="glass rounded-3xl border border-border/80 p-5 sm:p-6 shadow-xl backdrop-blur-xl">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              navigate(`/trips/new?name=${encodeURIComponent(searchDestination)}&days=10`);
+            }}
+            className="grid grid-cols-1 md:grid-cols-12 gap-3"
+          >
+            {/* Segment 1: Destination */}
+            <div className="md:col-span-4 flex items-center gap-3 px-3.5 py-2.5 rounded-2xl bg-surface border border-border/80">
+              <MapPin className="h-5 w-5 text-saffron shrink-0" />
+              <div className="flex-1 min-w-0 text-left">
+                <label className="block text-[10px] uppercase font-mono tracking-wider text-muted font-bold">
+                  Destination (Multi-City)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Where to? (e.g. Tokyo, Goa, Paris...)"
+                  value={searchDestination}
+                  onChange={(e) => setSearchDestination(e.target.value)}
+                  className="w-full bg-transparent text-sm text-parchment placeholder:text-muted focus:outline-none font-semibold truncate"
+                />
+              </div>
+            </div>
+
+            {/* Segment 2: Origin Gate */}
+            <div className="md:col-span-3 flex items-center gap-3 px-3.5 py-2.5 rounded-2xl bg-surface border border-border/80">
+              <Plane className="h-5 w-5 text-aurora shrink-0" />
+              <div className="flex-1 min-w-0 text-left">
+                <label className="block text-[10px] uppercase font-mono tracking-wider text-muted font-bold">
+                  Departure Origin
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Mumbai (BOM)"
+                  value={searchOrigin}
+                  onChange={(e) => setSearchOrigin(e.target.value)}
+                  className="w-full bg-transparent text-sm text-parchment placeholder:text-muted focus:outline-none font-semibold truncate"
+                />
+              </div>
+            </div>
+
+            {/* Segment 3: Duration */}
+            <div className="md:col-span-3 flex items-center gap-3 px-3.5 py-2.5 rounded-2xl bg-surface border border-border/80">
+              <Calendar className="h-5 w-5 text-amber-500 shrink-0" />
+              <div className="flex-1 min-w-0 text-left">
+                <label className="block text-[10px] uppercase font-mono tracking-wider text-muted font-bold">
+                  Duration & Pace
+                </label>
+                <select
+                  aria-label="Trip Duration"
+                  className="w-full bg-transparent text-sm text-parchment focus:outline-none font-semibold cursor-pointer"
+                  onChange={() => {}}
+                >
+                  <option value="7">7 Days · Quick Explorer</option>
+                  <option value="11">11 Days · Coastal & Heritage</option>
+                  <option value="14">14 Days · Complete Orbit</option>
+                  <option value="21">21 Days · Grand Odyssey</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Segment 4: Plan CTA */}
+            <div className="md:col-span-2">
               <button
-                type="button"
-                onClick={() => setActiveTab('multi')}
-                className={`inline-flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-sm font-medium transition-all ${
-                  activeTab === 'multi'
-                    ? 'bg-saffron text-ink font-semibold shadow-glow'
-                    : 'text-muted hover:bg-white/5 hover:text-parchment'
-                }`}
-              >
-                <Plane className="h-4 w-4" />
-                Multi-City Constellation
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('single')}
-                className={`inline-flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-sm font-medium transition-all ${
-                  activeTab === 'single'
-                    ? 'bg-saffron text-ink font-semibold shadow-glow'
-                    : 'text-muted hover:bg-white/5 hover:text-parchment'
-                }`}
-              >
-                <MapPin className="h-4 w-4" />
-                Single Destination
-              </button>
-            </div>
-            <span className="font-mono text-xs text-muted">AI-Powered Optimization Active ⚡</span>
-          </div>
-
-          {/* Search Form Fields */}
-          <form onSubmit={handleSearchSubmit} className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            {/* Origin Input */}
-            <div className="rounded-xl border border-white/10 bg-ink/60 p-3">
-              <label className="flex items-center gap-1.5 text-xs font-medium text-muted">
-                <MapPin className="h-3.5 w-3.5 text-saffron" />
-                Origin City
-              </label>
-              <input
-                type="text"
-                value={searchOrigin}
-                onChange={(e) => setSearchOrigin(e.target.value)}
-                className="mt-1 w-full bg-transparent text-sm font-semibold text-parchment focus:outline-none"
-                placeholder="e.g. Mumbai (BOM)"
-              />
-              <span className="text-[10px] text-muted">Primary departure gate</span>
-            </div>
-
-            {/* Multi Destinations Input */}
-            <div className="rounded-xl border border-white/10 bg-ink/60 p-3">
-              <label className="flex items-center gap-1.5 text-xs font-medium text-muted">
-                <Globe2 className="h-3.5 w-3.5 text-aurora" />
-                Destinations (Multi-Hops)
-              </label>
-              <input
-                type="text"
-                value={searchDestination}
-                onChange={(e) => setSearchDestination(e.target.value)}
-                className="mt-1 w-full bg-transparent text-sm font-semibold text-parchment focus:outline-none"
-                placeholder="Tokyo, Seoul, Bangkok"
-              />
-              <span className="text-[10px] text-muted">AI orders for minimum transit</span>
-            </div>
-
-            {/* Travel Dates */}
-            <div className="rounded-xl border border-white/10 bg-ink/60 p-3">
-              <label className="flex items-center gap-1.5 text-xs font-medium text-muted">
-                <Calendar className="h-3.5 w-3.5 text-coral" />
-                Window & Season
-              </label>
-              <div className="mt-1 text-sm font-semibold text-parchment">Dec 2026 – Jan 2027</div>
-              <span className="text-[10px] text-muted">14 Days · High Season</span>
-            </div>
-
-            {/* Travellers & Budget */}
-            <div className="rounded-xl border border-white/10 bg-ink/60 p-3">
-              <label className="flex items-center gap-1.5 text-xs font-medium text-muted">
-                <Wallet className="h-3.5 w-3.5 text-saffron" />
-                Budget Radar Cap
-              </label>
-              <div className="mt-1 text-sm font-semibold text-parchment">₹2,00,000 Cap</div>
-              <span className="text-[10px] text-muted">2 Travellers · Fuel Gauge Active</span>
-            </div>
-
-            {/* Search CTA */}
-            <div className="flex items-stretch">
-              <Button
                 type="submit"
-                className="h-full w-full rounded-xl bg-gradient-to-r from-saffron to-coral text-base font-bold text-ink shadow-glow hover:opacity-95"
+                className="w-full h-full min-h-[46px] rounded-2xl bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 text-slate-950 font-extrabold text-sm shadow-[0_0_15px_rgba(251,191,36,0.4)] hover:brightness-105 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <Search className="mr-2 h-4 w-4" />
-                Orbit Search
-              </Button>
+                <span>Plan Orbit</span>
+                <ArrowRight className="h-4 w-4 stroke-[2.5]" />
+              </button>
             </div>
           </form>
         </div>
@@ -700,6 +700,7 @@ export default function LandingPage() {
                 <img
                   src={city.image}
                   alt={city.name}
+                  onError={(e) => onImgError(e, city.name)}
                   className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-ink via-transparent to-transparent" />

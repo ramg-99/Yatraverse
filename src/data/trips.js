@@ -112,20 +112,77 @@ export const stopActivities = [
 
 /** @type {import('./schema.js').Expense[]} */
 export const expenses = [
-  { id: 'e1', trip_id: 't_spice', category: 'transport', amount: 28000, date: '2026-12-12' },
-  { id: 'e2', trip_id: 't_spice', category: 'stay', amount: 54000, date: '2026-12-12' },
-  { id: 'e3', trip_id: 't_spice', category: 'activities', amount: 18000, date: '2026-12-13' },
-  { id: 'e4', trip_id: 't_spice', category: 'meals', amount: 22000, date: '2026-12-14' },
-  { id: 'e5', trip_id: 't_neon', category: 'transport', amount: 72000, date: '2026-11-02' },
-  { id: 'e6', trip_id: 't_neon', category: 'stay', amount: 98000, date: '2026-11-02' },
-  { id: 'e7', trip_id: 't_neon', category: 'activities', amount: 41000, date: '2026-11-04' },
-  { id: 'e8', trip_id: 't_neon', category: 'meals', amount: 36000, date: '2026-11-05' },
-  { id: 'e9', trip_id: 't_atl', category: 'transport', amount: 64000, date: '2027-04-03' },
-  { id: 'e10', trip_id: 't_atl', category: 'stay', amount: 88000, date: '2027-04-03' },
-  { id: 'e11', trip_id: 't_atl', category: 'meals', amount: 30000, date: '2027-04-05' },
-  { id: 'e12', trip_id: 't_sahara', category: 'transport', amount: 58000, date: '2026-10-20' },
-  { id: 'e13', trip_id: 't_sahara', category: 'stay', amount: 62000, date: '2026-10-20' },
-  { id: 'e14', trip_id: 't_sahara', category: 'activities', amount: 24000, date: '2026-10-22' },
+  { id: 'e1', trip_id: 't_spice', category: 'transport', amount: 28000, date: '2026-12-12', paid_by: 'u_demo', notes: 'Train tickets Mumbai to Goa' },
+  { id: 'e2', trip_id: 't_spice', category: 'stay', amount: 54000, date: '2026-12-12', paid_by: 'u_demo', notes: 'Heritage Villa booking in Panaji' },
+  { id: 'e3', trip_id: 't_spice', category: 'activities', amount: 6000, date: '2026-12-13', paid_by: 'u_demo', stop_activity_id: 'sa1', notes: 'Mumbai Street Food Tour (Group of 4)' },
+  { id: 'e4', trip_id: 't_spice', category: 'meals', amount: 3600, date: '2026-12-14', paid_by: 'u_aisha', notes: 'Café Leopold Lunch & Cocktails' },
+  { id: 'e4b', trip_id: 't_spice', category: 'activities', amount: 4800, date: '2026-12-16', paid_by: 'u_kabir', stop_activity_id: 'sa4', notes: 'Goa Sunrise Yoga & Ayurvedic Spa' },
+  { id: 'e5', trip_id: 't_neon', category: 'transport', amount: 72000, date: '2026-11-02', paid_by: 'u_demo' },
+  { id: 'e6', trip_id: 't_neon', category: 'stay', amount: 98000, date: '2026-11-02', paid_by: 'u_demo' },
+  { id: 'e7', trip_id: 't_neon', category: 'activities', amount: 41000, date: '2026-11-04', paid_by: 'u_demo' },
+  { id: 'e8', trip_id: 't_neon', category: 'meals', amount: 36000, date: '2026-11-05', paid_by: 'u_demo' },
+  { id: 'e9', trip_id: 't_atl', category: 'transport', amount: 64000, date: '2027-04-03', paid_by: 'u_demo' },
+  { id: 'e10', trip_id: 't_atl', category: 'stay', amount: 88000, date: '2027-04-03', paid_by: 'u_demo' },
+  { id: 'e11', trip_id: 't_atl', category: 'meals', amount: 30000, date: '2027-04-05', paid_by: 'u_demo' },
+  { id: 'e12', trip_id: 't_sahara', category: 'transport', amount: 58000, date: '2026-10-20', paid_by: 'u_aisha' },
+  { id: 'e13', trip_id: 't_sahara', category: 'stay', amount: 62000, date: '2026-10-20', paid_by: 'u_aisha' },
+  { id: 'e14', trip_id: 't_sahara', category: 'activities', amount: 24000, date: '2026-10-22', paid_by: 'u_demo' },
+];
+
+/** Group members for collaborative trips */
+export const tripMembers = [
+  { id: 'tm1', trip_id: 't_spice', user_id: 'u_demo', role: 'owner', joined_at: '2026-09-01T12:00:00.000Z' },
+  { id: 'tm2', trip_id: 't_spice', user_id: 'u_aisha', role: 'editor', joined_at: '2026-09-02T14:30:00.000Z' },
+  { id: 'tm3', trip_id: 't_spice', user_id: 'u_kabir', role: 'member', joined_at: '2026-09-05T09:15:00.000Z' },
+  { id: 'tm4', trip_id: 't_spice', user_id: 'u_maya', role: 'member', joined_at: '2026-09-07T11:45:00.000Z' },
+  { id: 'tm5', trip_id: 't_neon', user_id: 'u_demo', role: 'owner', joined_at: '2026-08-18T12:00:00.000Z' },
+  { id: 'tm6', trip_id: 't_neon', user_id: 'u_aisha', role: 'member', joined_at: '2026-08-20T10:00:00.000Z' },
+];
+
+/** Group Votes on itinerary activities (+1 = 👍, -1 = 👎) */
+export const votes = [
+  // sa1: Mumbai Food Walk -> Consensus Favorite! (+4)
+  { id: 'v1', trip_id: 't_spice', stop_activity_id: 'sa1', activity_id: 'a_c_mum_food_0', user_id: 'u_demo', value: 1 },
+  { id: 'v2', trip_id: 't_spice', stop_activity_id: 'sa1', activity_id: 'a_c_mum_food_0', user_id: 'u_aisha', value: 1 },
+  { id: 'v3', trip_id: 't_spice', stop_activity_id: 'sa1', activity_id: 'a_c_mum_food_0', user_id: 'u_kabir', value: 1 },
+  { id: 'v4', trip_id: 't_spice', stop_activity_id: 'sa1', activity_id: 'a_c_mum_food_0', user_id: 'u_maya', value: 1 },
+
+  // sa2: Elephanta Caves / Sightseeing -> Group Conflict! (-2: 3 voted against)
+  { id: 'v5', trip_id: 't_spice', stop_activity_id: 'sa2', activity_id: 'a_c_mum_sightseeing_0', user_id: 'u_demo', value: -1 },
+  { id: 'v6', trip_id: 't_spice', stop_activity_id: 'sa2', activity_id: 'a_c_mum_sightseeing_0', user_id: 'u_aisha', value: -1 },
+  { id: 'v7', trip_id: 't_spice', stop_activity_id: 'sa2', activity_id: 'a_c_mum_sightseeing_0', user_id: 'u_kabir', value: -1 },
+  { id: 'v8', trip_id: 't_spice', stop_activity_id: 'sa2', activity_id: 'a_c_mum_sightseeing_0', user_id: 'u_maya', value: 1 },
+
+  // sa4: Goa Wellness Yoga -> Upvoted (+3)
+  { id: 'v9', trip_id: 't_spice', stop_activity_id: 'sa4', activity_id: 'a_c_goa_wellness_0', user_id: 'u_demo', value: 1 },
+  { id: 'v10', trip_id: 't_spice', stop_activity_id: 'sa4', activity_id: 'a_c_goa_wellness_0', user_id: 'u_aisha', value: 1 },
+  { id: 'v11', trip_id: 't_spice', stop_activity_id: 'sa4', activity_id: 'a_c_goa_wellness_0', user_id: 'u_maya', value: 1 },
+
+  // sa6: Goa Water Sports -> Mixed (+1: 2 for, 1 against)
+  { id: 'v12', trip_id: 't_spice', stop_activity_id: 'sa6', activity_id: 'a_c_goa_adventure_1', user_id: 'u_demo', value: 1 },
+  { id: 'v13', trip_id: 't_spice', stop_activity_id: 'sa6', activity_id: 'a_c_goa_adventure_1', user_id: 'u_kabir', value: 1 },
+  { id: 'v14', trip_id: 't_spice', stop_activity_id: 'sa6', activity_id: 'a_c_goa_adventure_1', user_id: 'u_aisha', value: -1 },
+];
+
+/** Expense Splits between group members */
+export const expenseSplits = [
+  // e3: Mumbai Food Trail (₹6,000 paid by u_demo, split 4 ways: ₹1,500 each)
+  { id: 'sp1', expense_id: 'e3', user_id: 'u_demo', share: 1500, is_settled: true },
+  { id: 'sp2', expense_id: 'e3', user_id: 'u_aisha', share: 1500, is_settled: false },
+  { id: 'sp3', expense_id: 'e3', user_id: 'u_kabir', share: 1500, is_settled: false },
+  { id: 'sp4', expense_id: 'e3', user_id: 'u_maya', share: 1500, is_settled: false },
+
+  // e4: Café Leopold Lunch (₹3,600 paid by u_aisha, split 4 ways: ₹900 each)
+  { id: 'sp5', expense_id: 'e4', user_id: 'u_demo', share: 900, is_settled: false },
+  { id: 'sp6', expense_id: 'e4', user_id: 'u_aisha', share: 900, is_settled: true },
+  { id: 'sp7', expense_id: 'e4', user_id: 'u_kabir', share: 900, is_settled: false },
+  { id: 'sp8', expense_id: 'e4', user_id: 'u_maya', share: 900, is_settled: false },
+
+  // e4b: Goa Yoga & Spa (₹4,800 paid by u_kabir, split 4 ways: ₹1,200 each)
+  { id: 'sp9', expense_id: 'e4b', user_id: 'u_demo', share: 1200, is_settled: false },
+  { id: 'sp10', expense_id: 'e4b', user_id: 'u_aisha', share: 1200, is_settled: false },
+  { id: 'sp11', expense_id: 'e4b', user_id: 'u_kabir', share: 1200, is_settled: true },
+  { id: 'sp12', expense_id: 'e4b', user_id: 'u_maya', share: 1200, is_settled: false },
 ];
 
 /** @type {import('./schema.js').SavedDestination[]} */

@@ -1,7 +1,32 @@
 const router = require('express').Router();
-const { auth } = require('../middleware/auth');
+const { optionalAuth } = require('../middleware/auth');
 
-// Heuristic itinerary generator (no API key needed — works 100% offline)
+const GEMINI_MODELS = ['gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.8-flash'];
+
+async function callGemini(prompt, systemInstruction = '') {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const fullPrompt = systemInstruction ? `${systemInstruction}\n\n${prompt}` : prompt;
+
+  for (const model of GEMINI_MODELS) {
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: fullPrompt }] }] }),
+      });
+      const data = await res.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (text) return text;
+    } catch {
+      // try next model
+    }
+  }
+  return null;
+}
+
+// Heuristic itinerary generator (fallback)
 function heuristicItinerary({ destination, duration, budget, travelers, interests }) {
   const days = Number(duration) || 7;
   const bud = Number(budget) || 150000;
@@ -22,37 +47,20 @@ function heuristicItinerary({ destination, duration, budget, travelers, interest
   return lines.join('');
 }
 
-// POST /api/ai/generate — streaming itinerary generation
-router.post('/generate', auth, async (req, res, next) => {
+// POST /api/ai/generate — live Gemini itinerary generation
+router.post('/generate', optionalAuth, async (req, res, next) => {
   try {
-    const GEMINI_KEY = process.env.GEMINI_API_KEY;
+    const { destination, duration, budget, travelers, interests, prompt } = req.body;
+    const userPrompt = prompt || `Create an inspiring, highly practical, day-by-day travel itinerary for a ${duration || 7}-day trip to ${destination || 'India and Asia'} for ${travelers || 2} travelers with an estimated budget of ₹${(budget || 150000).toLocaleString()}. Focus areas: ${(interests || []).join(', ') || 'culture, food, hidden gems'}. Include estimated costs in INR and insider tips.`;
 
-    if (GEMINI_KEY) {
-      // Real Gemini API call
-      const { destination, duration, budget, travelers, interests, prompt } = req.body;
-      const userPrompt = prompt || `Plan a ${duration}-day trip to ${destination} for ${travelers} travelers with budget ₹${budget}. Interests: ${(interests || []).join(', ')}. Provide a detailed day-by-day itinerary with costs.`;
-
-      const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: userPrompt }] }] }),
-        },
-      );
-      const data = await geminiRes.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || heuristicItinerary(req.body);
-      res.json({ text });
-    } else {
-      // Heuristic fallback — zero API cost
-      const text = heuristicItinerary(req.body);
-      res.json({ text });
-    }
+    const liveText = await callGemini(userPrompt, 'You are Yatra AI, the world-class intelligent travel assistant for Yatraverse. Provide structured, engaging, actionable travel itineraries with markdown headings and clear bullet points.');
+    
+    res.json({ text: liveText || heuristicItinerary(req.body) });
   } catch (e) { next(e); }
 });
 
 // POST /api/ai/optimize — trip optimization suggestions
-router.post('/optimize', auth, async (req, res, next) => {
+router.post('/optimize', optionalAuth, async (req, res, next) => {
   try {
     const { trip } = req.body;
     const suggestions = [
@@ -65,32 +73,38 @@ router.post('/optimize', auth, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// POST /api/ai/chat — context-aware trip chatbot
-router.post('/chat', auth, async (req, res, next) => {
+// POST /api/ai/chat — live interactive Gemini travel chat
+router.post('/chat', optionalAuth, async (req, res, next) => {
   try {
     const { messages, tripName } = req.body;
-    const last = (messages || []).slice(-1)[0]?.content?.toLowerCase() || '';
-    const GEMINI_KEY = process.env.GEMINI_API_KEY;
+    const msgList = Array.isArray(messages) ? messages : [];
 
-    if (GEMINI_KEY) {
-      const systemPrompt = `You are a helpful travel planning assistant for the app Yatraverse. The user is planning: "${tripName || 'a trip'}". Answer concisely and helpfully.`;
-      const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: `${systemPrompt}\n\nUser: ${last}` }] }] }),
-        },
-      );
-      const data = await geminiRes.json();
-      const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'I can help with your trip planning!';
-      return res.json({ reply });
+    // Extract text from messages whether sent as text or content
+    const conversationHistory = msgList.map((m) => {
+      const sender = m.role === 'assistant' || m.sender === 'ai' ? 'Assistant' : 'User';
+      const body = m.content || m.text || '';
+      return `${sender}: ${body}`;
+    }).join('\n');
+
+    const lastMsg = msgList.length > 0 ? (msgList[msgList.length - 1].content || msgList[msgList.length - 1].text || '') : '';
+
+    const systemPrompt = `You are Yatra AI, an empathetic, knowledgeable, and energetic travel assistant for the travel planning platform Yatraverse. 
+The user is planning or exploring: "${tripName || 'a wonderful trip'}".
+Give live, personalized, creative, and actionable travel answers. Use clear formatting, bullet points, recommendations on food, budget, logistics, secret spots, and safety. Keep answers friendly and concise.`;
+
+    const promptToSend = conversationHistory ? `Conversation so far:\n${conversationHistory}\n\nPlease respond to the user's latest query.` : lastMsg;
+
+    const liveReply = await callGemini(promptToSend, systemPrompt);
+
+    if (liveReply) {
+      return res.json({ reply: liveReply });
     }
 
-    // Heuristic fallback
-    const reply = last.includes('food')
+    // Heuristic fallback only if API key is not configured or offline
+    const lower = lastMsg.toLowerCase();
+    const reply = lower.includes('food')
       ? `For ${tripName || 'your trip'}, chase local street food first — it's the most authentic and cheapest way to eat. Reserve one nice restaurant per city for a splurge meal.`
-      : last.includes('budget')
+      : lower.includes('budget')
       ? `${tripName || 'Your trip'} can be optimised: cap accommodation at 40% of budget, use public transport, and avoid tourist-trap restaurants near landmarks.`
       : `I can sketch a day plan, swap an activity, or check your budget for ${tripName || 'your trip'}. What do you need?`;
 
@@ -99,3 +113,4 @@ router.post('/chat', auth, async (req, res, next) => {
 });
 
 module.exports = router;
+

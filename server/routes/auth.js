@@ -17,6 +17,32 @@ function safeUser(u) {
   return rest;
 }
 
+// POST /api/auth/sync — sync Supabase user into PostgreSQL User table
+router.post('/sync', async (req, res, next) => {
+  try {
+    const { id, email, name, avatarUrl, role } = req.body;
+    if (!id || !email) return res.status(400).json({ error: 'id and email required' });
+
+    const user = await prisma.user.upsert({
+      where: { id },
+      update: {
+        email,
+        name: name || email.split('@')[0],
+        avatarUrl: avatarUrl || undefined,
+      },
+      create: {
+        id,
+        email,
+        name: name || email.split('@')[0],
+        avatarUrl: avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=256',
+        passwordHash: 'supabase-auth-managed',
+        role: role || (email === 'admin@yatraverse.app' ? 'admin' : 'user'),
+      },
+    });
+    res.json(safeUser(user));
+  } catch (e) { next(e); }
+});
+
 // POST /api/auth/register
 router.post('/register', async (req, res, next) => {
   try {
