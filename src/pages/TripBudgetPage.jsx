@@ -1,6 +1,6 @@
 import { useMemo, useState, lazy, Suspense } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { PieChart as PieIcon, BarChart3, AlertTriangle, CheckCircle2, ArrowRight, DollarSign, SlidersHorizontal, MapPin } from 'lucide-react';
+import { PieChart as PieIcon, BarChart3, AlertTriangle, CheckCircle2, ArrowRight, DollarSign, SlidersHorizontal, MapPin, Hotel } from 'lucide-react';
 import { useWorldStore } from '@/store/useWorldStore.js';
 import { useSettingsStore } from '@/store/useSettingsStore.js';
 import { spendFor, daysOf } from '@/lib/tripView.js';
@@ -10,6 +10,7 @@ import { money } from '@/lib/utils.js';
 import { onImgError } from '@/lib/image.js';
 import { Button } from '@/components/ui/button.jsx';
 import { SettleUpTab } from '@/components/collaboration/SettleUpTab.jsx';
+import { BookStaysModal } from '@/components/booking/BookStaysModal.jsx';
 
 const PieChart = lazy(() => import('recharts').then((m) => ({ default: m.PieChart })));
 const Pie = lazy(() => import('recharts').then((m) => ({ default: m.Pie })));
@@ -34,6 +35,7 @@ export default function TripBudgetPage() {
   const setCurrency = useSettingsStore((s) => s.setCurrency);
   const [stayReduction, setStayReduction] = useState(0);
   const [activeBudgetTab, setActiveBudgetTab] = useState('radar'); // 'radar' | 'settle'
+  const [bookingCity, setBookingCity] = useState(null);
 
   const spend = useMemo(
     () => (trip ? spendFor(trip.id) : { byCat: {}, total: 0, cityBreakdown: [] }),
@@ -418,9 +420,20 @@ export default function TripBudgetPage() {
                       <span className="text-[10px] text-muted uppercase font-mono">City Total</span>
                       <p className="font-mono text-base font-bold text-saffron">{money(cityTotalConverted, currency)}</p>
                     </div>
-                    <span className="rounded-full bg-saffron/15 px-2 py-0.5 font-mono text-[10px] text-saffron font-bold">
-                      {percent}% of trip
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setBookingCity(item.city)}
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-saffron/15 text-saffron text-xs font-semibold hover:bg-saffron hover:text-slate-950 transition-all cursor-pointer"
+                        title="Book Hotels & Dining in this city"
+                      >
+                        <Hotel className="h-3.5 w-3.5" />
+                        <span>Book Stay / Eats</span>
+                      </button>
+                      <span className="rounded-full bg-saffron/15 px-2 py-0.5 font-mono text-[10px] text-saffron font-bold">
+                        {percent}% of trip
+                      </span>
+                    </div>
                   </div>
                 </div>
               );
@@ -430,6 +443,14 @@ export default function TripBudgetPage() {
       </div>
         </>
       )}
+
+      {/* Book Stays & Dining Modal */}
+      <BookStaysModal
+        isOpen={Boolean(bookingCity)}
+        onClose={() => setBookingCity(null)}
+        city={bookingCity}
+        trip={trip}
+      />
 
       {/* Action links */}
       <div className="flex gap-3 text-xs">
