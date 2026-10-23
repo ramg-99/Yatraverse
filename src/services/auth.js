@@ -1,79 +1,63 @@
-import { simulate } from '@/lib/simulate.js';
 import { uid } from '@/lib/utils.js';
 import { useWorldStore } from '@/store/useWorldStore.js';
 import { useAuthStore } from '@/store/useAuthStore.js';
-import { apiRequest, isBackendAvailable, normalizeUser } from '@/lib/api.js';
+import { apiRequest } from '@/lib/api.js';
 import { supabase } from '@/lib/supabase.js';
 
+/**
+ * Normalizes Supabase User into Yatraverse User shape
+ */
+function toAppUser(sbUser) {
+  return {
+    id: sbUser.id,
+    email: sbUser.email,
+    name: sbUser.user_metadata?.name || sbUser.user_metadata?.full_name || sbUser.email?.split('@')[0] || 'Traveler',
+    avatarUrl: sbUser.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=256',
+    role: sbUser.email === 'admin@yatraverse.app' ? 'admin' : (sbUser.app_metadata?.role || 'user'),
+  };
+}
 
 /**
- * Logs in via Supabase Auth (or demo credentials fallback).
+ * Logs in via Supabase Auth.
  * @param {string} email
  * @param {string} password
  * @returns {Promise<import('@/data/schema.js').User>}
  */
 export async function login(email, password) {
-  // 1. Try Supabase Auth
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (!error && data?.user) {
-      const user = {
-        id: data.user.id,
-        email: data.user.email,
-        name: data.user.user_metadata?.name || data.user.user_metadata?.full_name || email.split('@')[0],
-        avatarUrl: data.user.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=256',
-        role: email === 'admin@yatraverse.app' ? 'admin' : (data.user.app_metadata?.role || 'user'),
-      };
-      const token = data.session?.access_token || 'supabase-session';
-      useAuthStore.getState().setAuth({ user, token });
-      useWorldStore.getState().upsertUser(user);
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-      // Sync user profile to PostgreSQL User table
-      apiRequest('/auth/sync', {
-        method: 'POST',
-        body: JSON.stringify(user),
-      }).catch(() => {});
-
-      return user;
+  if (error) {
+    if (error.message?.toLowerCase().includes('email not confirmed')) {
+      throw new Error(
+        'Email not confirmed yet. Please verify your email inbox, or in your Supabase Dashboard go to Authentication -> Providers -> Email and toggle OFF "Confirm email" for instant login.'
+      );
     }
-    if (error && !email.includes('demo@') && !email.includes('admin@')) {
-      throw new Error(error.message);
-    }
-  } catch (err) {
-    if (!email.includes('demo@') && !email.includes('admin@')) {
-      throw err;
-    }
+    throw new Error(error.message || 'Invalid email or password.');
   }
 
-  // 2. Demo Evaluation Accounts
-  if (email === 'demo@yatraverse.app' || email === 'admin@yatraverse.app') {
-    const isAdmin = email === 'admin@yatraverse.app';
-    const user = {
-      id: isAdmin ? 'u_admin' : 'u_aarav',
-      email,
-      name: isAdmin ? 'Atlas Admin' : 'Aarav Mehta',
-      role: isAdmin ? 'admin' : 'user',
-      avatarUrl: isAdmin
-        ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=256'
-        : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=256',
-    };
-    useAuthStore.getState().setAuth({ user, token: 'demo-supabase-session-token' });
-    useWorldStore.getState().upsertUser(user);
-    return user;
+  if (!data?.user) {
+    throw new Error('Login failed. Please check your credentials.');
   }
 
-  throw new Error('Invalid email or password.');
-}
+  const user = toAppUser(data.user);
+  const token = data.session?.access_token;
 
-/** @returns {Promise<import('@/data/schema.js').User>} */
-export async function loginDemo() {
-  return login('demo@yatraverse.app', 'demo1234');
+  useAuthStore.getState().setAuth({ user, token });
+  useWorldStore.getState().upsertUser(user);
+
+  // Sync profile into PostgreSQL User table
+  apiRequest('/auth/sync', {
+    method: 'POST',
+    body: JSON.stringify(user),
+  }).catch(() => {});
+
+  return user;
 }
 
 /**
- * Registers new user via Supabase Auth and mirrors into PostgreSQL.
+ * Registers new user via Supabase Auth.
  * @param {{ name: string, email: string, password: string }} payload
- * @returns {Promise<import('@/data/schema.js').User>}
+ * @returns {Promise<{ user: import('@/data/schema.js').User, needsConfirmation: boolean, message?: string }>}
  */
 export async function signup(payload) {
   const { name, email, password } = payload;
@@ -90,72 +74,58 @@ export async function signup(payload) {
     throw new Error(error.message);
   }
 
-  const suUser = data?.user;
-  const user = {
-    id: suUser?.id || uid('u_'),
-    email,
-    name,
-    role: 'user',
-    avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=256',
+  const sbUser = data?.user;
+  if (!sbUser) {
+    throw new Error('Registration failed. Please try again.');
+  }
+
+  const user = toAppUser(sbUser);
+  const token = data.session?.access_token;
+
+  // If Supabase returned an active session (Confirm email is disabled)
+  if (token) {
+    useAuthStore.getState().setAuth({ user, token });
+    useAuthStore.getState().setPersonaDone(false);
+    useWorldStore.getState().upsertUser(user);
+
+    // Sync into PostgreSQL User table
+    apiRequest('/auth/sync', {
+      method: 'POST',
+      body: JSON.stringify(user),
+    }).catch(() => {});
+
+    return { user, needsConfirmation: false };
+  }
+
+  // If Supabase requires email verification before session is issued
+  return {
+    user,
+    needsConfirmation: true,
+    message: 'Account created! Please check your email inbox to confirm your account (or disable "Confirm email" in your Supabase Dashboard to log in immediately).',
   };
-
-  const token = data.session?.access_token || 'supabase-registered-token';
-  useAuthStore.getState().setAuth({ user, token });
-  useAuthStore.getState().setPersonaDone(false);
-  useWorldStore.getState().upsertUser(user);
-
-  // Sync to PostgreSQL user table
-  apiRequest('/auth/sync', {
-    method: 'POST',
-    body: JSON.stringify(user),
-  }).catch(() => {});
-
-  return user;
 }
 
-
 /**
- * Updates user profile on backend API or local store.
+ * Updates user profile via backend API or Supabase user metadata.
  */
 export async function updateProfile(patch) {
-  const online = await isBackendAvailable();
-  if (online) {
-    try {
-      const data = await apiRequest('/auth/profile', {
-        method: 'PUT',
-        body: JSON.stringify(patch),
-      });
-      const user = normalizeUser(data);
-      useAuthStore.getState().setUser(user);
-      useWorldStore.getState().upsertUser(user);
-      return user;
-    } catch (err) {
-      if (err.status && err.status < 500) throw err;
-    }
-  }
-
-  return simulate(() => {
-    const current = useAuthStore.getState().user;
-    if (!current) throw new Error('Not authenticated');
-    const updated = { ...current, ...patch };
-    useAuthStore.getState().setUser(updated);
-    useWorldStore.getState().upsertUser(updated);
-    return updated;
+  await apiRequest('/auth/profile', {
+    method: 'PUT',
+    body: JSON.stringify(patch),
   });
+  const current = useAuthStore.getState().user;
+  const updated = { ...current, ...patch };
+  useAuthStore.getState().setUser(updated);
+  useWorldStore.getState().upsertUser(updated);
+  return updated;
 }
 
 /**
- * Deletes user account on backend API or local store.
+ * Deletes user account.
  */
 export async function deleteAccount() {
-  const online = await isBackendAvailable();
-  if (online) {
-    try {
-      await apiRequest('/auth/account', { method: 'DELETE' });
-    } catch (err) {
-      if (err.status && err.status < 500) throw err;
-    }
-  }
+  await apiRequest('/auth/account', { method: 'DELETE' });
+  await supabase.auth.signOut().catch(() => {});
   const u = useAuthStore.getState().user;
   if (u) {
     const w = useWorldStore.getState();
@@ -165,9 +135,12 @@ export async function deleteAccount() {
   return true;
 }
 
-/** @param {string} _email */
-export async function forgotPassword(_email) {
-  return simulate({ sent: true }, { failRate: 0.01 });
+export async function forgotPassword(email) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/reset-password`,
+  });
+  if (error) throw error;
+  return { sent: true };
 }
 
 export async function loginWithGoogle() {
@@ -197,13 +170,7 @@ export async function verifyPhoneOtp(phone, token) {
   });
   if (error) throw error;
   if (data?.user) {
-    const user = {
-      id: data.user.id,
-      email: data.user.email || `${phone.replace(/\D/g, '')}@phone.yatraverse.app`,
-      name: data.user.user_metadata?.full_name || `Traveler ${phone.slice(-4)}`,
-      role: 'user',
-      avatarUrl: data.user.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=256',
-    };
+    const user = toAppUser(data.user);
     useAuthStore.getState().setAuth({ user, token: data.session?.access_token });
     useWorldStore.getState().upsertUser(user);
     return user;
@@ -214,4 +181,3 @@ export function logout() {
   supabase.auth.signOut().catch(() => {});
   useAuthStore.getState().logout();
 }
-

@@ -22,9 +22,14 @@ export default function SignupPage() {
 
   const onSubmit = async (values) => {
     try {
-      await signup(values);
-      toast.success('Account created successfully! Welcome to Yatraverse.');
-      nav('/dashboard');
+      const res = await signup(values);
+      if (res?.needsConfirmation) {
+        toast.info(res.message || 'Account created! Please check your email to confirm, or turn off "Confirm email" in Supabase Dashboard.', { duration: 7000 });
+        nav('/login');
+      } else {
+        toast.success('Account created successfully! Welcome to Yatraverse.');
+        nav('/dashboard');
+      }
     } catch (e) {
       toast.error(e.message);
     }

@@ -120,8 +120,8 @@ const FAQS = [
     a: 'Our AI engine calculates geographical hops, airport connectivity (IATA matrices), seasonal weather windows, and cost distributions to order your destinations into the most time- and cash-efficient loop.',
   },
   {
-    q: 'Can I try the full platform without creating a new account?',
-    a: 'Yes! Click "Demo Traveller" on the login screen or use demo@yatraverse.app / demo1234 to immediately explore real multi-city trips, interactive boarding passes, and budget radars.',
+    q: 'How does authentication and cloud sync work?',
+    a: 'Yatraverse uses enterprise-grade Supabase Authentication to protect your account and automatically synchronize your multi-city itineraries, travel preferences, and shared budgets across all your devices in real time.',
   },
   {
     q: 'Does Yatraverse work when I lose internet connectivity?',
@@ -135,7 +135,6 @@ const FAQS = [
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const loginDemoTraveller = useAuthStore((s) => s.loginDemoTraveller);
   const [activeTab, setActiveTab] = useState('multi');
   const [selectedDemoTripIndex, setSelectedDemoTripIndex] = useState(0);
   const [filterRegion, setFilterRegion] = useState('All');
@@ -171,11 +170,6 @@ export default function LandingPage() {
   };
 
   const { mode, toggleMode } = useThemeStore();
-
-  const copyDemoCreds = () => {
-    navigator.clipboard?.writeText('demo@yatraverse.app / demo1234');
-    toast.info('Copied Demo Credentials: demo@yatraverse.app / demo1234');
-  };
 
   return (
     <div className="relative min-h-screen bg-ink text-parchment selection:bg-saffron/30 selection:text-white">
@@ -241,17 +235,6 @@ export default function LandingPage() {
               </span>
             </Link>
 
-            <button
-              type="button"
-              onClick={() => {
-                loginDemoTraveller();
-                navigate('/dashboard');
-              }}
-              className="whitespace-nowrap px-4 py-2 text-sm font-semibold rounded-xl border border-saffron/50 text-saffron hover:bg-saffron/15 hover:border-saffron hover:shadow-[0_0_15px_rgba(251,191,36,0.25)] active:scale-95 transition-all cursor-pointer shrink-0"
-            >
-              Demo Traveller
-            </button>
-
             <Link to="/signup" className="shrink-0">
               <button
                 type="button"
@@ -316,17 +299,15 @@ export default function LandingPage() {
                   <ArrowRight className="h-4 w-4 stroke-[2.5]" />
                 </button>
               </Link>
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => {
-                  loginDemoTraveller();
-                  navigate('/dashboard');
-                }}
-                className="border-border/80 bg-surface/50 hover:bg-surface text-saffron hover:text-saffron shadow-xs font-semibold"
-              >
-                Demo Traveller (1-Click)
-              </Button>
+              <Link to="/login">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-border/80 bg-surface/50 hover:bg-surface text-parchment hover:text-saffron shadow-xs font-semibold"
+                >
+                  Sign In
+                </Button>
+              </Link>
             </div>
 
             {/* Social Trust Metrics */}
@@ -785,40 +766,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* DEMO CREDENTIALS CALLOUT FOR JUDGES */}
-      <section className="relative z-10 mx-auto mt-24 max-w-5xl px-4 sm:px-6">
-        <div className="rounded-2xl border border-saffron/40 bg-gradient-to-r from-saffron/10 via-surface to-aurora/10 p-6 text-center sm:p-8">
-          <span className="rounded-full bg-saffron/20 px-3 py-1 font-mono text-xs font-semibold text-saffron">
-            BUILDATHON 2.0 EVALUATOR ACCESS
-          </span>
-          <h3 className="mt-3 font-display text-2xl font-bold text-parchment sm:text-3xl">
-            Test the live system with one click
-          </h3>
-          <p className="mx-auto mt-2 max-w-xl text-xs text-muted sm:text-sm">
-            Both the Node.js Express backend and Prisma SQLite/Postgres database are connected and operational.
-          </p>
-
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
-            <div className="rounded-xl border border-white/10 bg-ink/80 px-4 py-2 font-mono text-xs text-parchment">
-              Demo Traveller: <span className="text-saffron">demo@yatraverse.app</span> / Pass:{' '}
-              <span className="text-saffron">demo1234</span>
-            </div>
-          </div>
-
-          <div className="mt-6 flex justify-center gap-3">
-            <Button
-              size="lg"
-              onClick={() => {
-                loginDemoTraveller();
-                navigate('/dashboard');
-              }}
-              className="bg-saffron text-ink font-bold shadow-glow hover:bg-saffron/90"
-            >
-              Launch Demo Traveller Now
-            </Button>
-          </div>
-        </div>
-      </section>
 
       {/* FREQUENTLY ASKED QUESTIONS */}
       <section className="relative z-10 mx-auto mt-24 max-w-4xl px-4 sm:px-6">
@@ -866,7 +813,7 @@ export default function LandingPage() {
             </Link>
             <Link to="/login">
               <Button size="lg" variant="outline" className="border-border hover:bg-surface">
-                Try Demo Mode
+                Sign In
               </Button>
             </Link>
           </div>

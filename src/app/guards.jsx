@@ -1,25 +1,35 @@
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore.js';
-import { users } from '@/data/users.js';
 
 export function ProtectedRoute({ children }) {
   const user = useAuthStore((s) => s.user);
+  const location = useLocation();
+
   if (!user) {
-    // Auto-login demo traveller so evaluators can browse all pages seamlessly
-    useAuthStore.getState().setUser(users[0]);
+    // Strictly block access and redirect unauthenticated users to /login
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
   return children;
 }
 
 export function AdminRoute({ children }) {
   const user = useAuthStore((s) => s.user);
-  if (!user || user.role !== 'admin') {
-    // If not admin, temporarily elevate or allow admin view for testing
-    return children;
+  const location = useLocation();
+
+  if (!user) {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
+  if (user.role !== 'admin') {
+    return <Navigate to="/dashboard" replace />;
   }
   return children;
 }
 
 export function GuestRoute({ children }) {
+  const user = useAuthStore((s) => s.user);
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
   return children;
 }
 

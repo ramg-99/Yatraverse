@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { Eye, EyeOff, LogIn, Shield, ArrowRight, Phone, Mail } from 'lucide-react';
 import { loginSchema } from '@/schemas/auth.js';
-import { login, loginDemo, loginWithGoogle, sendPhoneOtp, verifyPhoneOtp } from '@/services/auth.js';
+import { login, loginWithGoogle, sendPhoneOtp, verifyPhoneOtp } from '@/services/auth.js';
 import { useAuthStore } from '@/store/useAuthStore.js';
 
 import { Button } from '@/components/ui/button.jsx';
@@ -26,7 +26,7 @@ export default function LoginPage() {
   const loc = useLocation();
   const form = useForm({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: 'demo@yatraverse.app', password: 'demo1234' },
+    defaultValues: { email: '', password: '' },
   });
 
   const onSubmit = async (values) => {
@@ -77,17 +77,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleTravellerDemo = async () => {
-    try {
-      await loginDemo();
-      toast.success('Signed in as Demo Traveller (Aarav Mehta).');
-      nav('/dashboard');
-    } catch (e) {
-      toast.error(e.message);
-    }
-  };
-
-
   return (
     <div className="relative min-h-screen bg-ink text-parchment grid lg:grid-cols-2">
       <ConstellationBg />
@@ -118,9 +107,6 @@ export default function LoginPage() {
               <span className="font-mono text-xs uppercase tracking-widest text-saffron">
                 Supabase Auth
               </span>
-              <Link to="/dashboard" className="text-xs text-muted hover:text-parchment">
-                Skip to Dashboard →
-              </Link>
             </div>
             <h1 className="mt-2 font-display text-3xl font-bold text-parchment">
               {phoneMode ? 'Sign in with Phone' : 'Sign in to Yatraverse'}
@@ -270,25 +256,8 @@ export default function LoginPage() {
             </button>
           </div>
 
-          {/* Quick 1-Click Demo Evaluation Buttons */}
-          <div className="pt-2 border-t border-border/30 space-y-2">
-            <p className="text-[11px] text-muted text-center font-mono uppercase tracking-wider">
-              1-Click Evaluation Access
-            </p>
-            <div className="flex justify-center">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="w-full text-xs border-saffron/40 text-saffron hover:bg-saffron/10"
-                onClick={handleTravellerDemo}
-              >
-                👤 Sign in as Demo Traveller (Aarav Mehta)
-              </Button>
-            </div>
-          </div>
-
-          <p className="text-center text-xs text-muted pt-2">
+          {/* Create Account link */}
+          <p className="text-center text-xs text-muted pt-3 border-t border-border/30">
             Don't have an account?{' '}
             <Link to="/signup" className="text-saffron font-semibold hover:underline">
               Create Account

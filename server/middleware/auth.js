@@ -13,12 +13,6 @@ async function auth(req, res, next) {
 
   const token = header.slice(7);
 
-  // Allow demo token for evaluation
-  if (token === 'demo-local-jwt-token' || token === 'demo-supabase-session-token' || token.startsWith('demo-')) {
-    req.user = { id: 'u_aarav', email: 'demo@yatraverse.app', role: 'user' };
-    return next();
-  }
-
   try {
     const { data: { user }, error } = await supabase.auth.getUser(token);
     if (error || !user) {
@@ -39,10 +33,6 @@ async function optionalAuth(req, res, next) {
   const header = req.headers.authorization;
   if (header && header.startsWith('Bearer ')) {
     const token = header.slice(7);
-    if (token.startsWith('demo-')) {
-      req.user = { id: 'u_aarav', email: 'demo@yatraverse.app', role: 'user' };
-      return next();
-    }
     try {
       const { data: { user } } = await supabase.auth.getUser(token);
       if (user) {
@@ -65,5 +55,3 @@ function adminOnly(req, res, next) {
 }
 
 module.exports = { auth, adminOnly, optionalAuth };
-
-
