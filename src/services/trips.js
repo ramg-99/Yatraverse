@@ -1,6 +1,7 @@
 import { simulate } from '@/lib/simulate.js';
 import { slugify, uid } from '@/lib/utils.js';
 import { useWorldStore } from '@/store/useWorldStore.js';
+import { createSeed } from '@/data/seed.js';
 import {
   apiRequest,
   isBackendAvailable,
@@ -52,15 +53,24 @@ export async function listTrips(userId) {
   if (online) {
     try {
       const data = await apiRequest('/trips');
-      const trips = (data || []).map(normalizeTrip);
+      const backendTrips = (data || []).map(normalizeTrip);
       const w = useWorldStore.getState();
-      w.setTrips(trips);
+
+      // Merge backend trips with client seed trips so flagship journeys are always available
+      const seedData = createSeed();
+      const combinedTrips = [...backendTrips];
+      (seedData.trips || []).forEach((st) => {
+        if (!combinedTrips.some((t) => t.id === st.id)) {
+          combinedTrips.push(st);
+        }
+      });
+      w.setTrips(combinedTrips);
 
       // Also sync all stops and stop activities
-      const allStops = [];
-      const allSa = [];
-      const allExp = [];
-      trips.forEach((t) => {
+      const allStops = [...(seedData.stops || [])];
+      const allSa = [...(seedData.stopActivities || [])];
+      const allExp = [...(seedData.expenses || [])];
+      backendTrips.forEach((t) => {
         if (t.stops) {
           allStops.push(...t.stops);
           t.stops.forEach((s) => {
@@ -73,7 +83,7 @@ export async function listTrips(userId) {
       if (allSa.length) w.setStopActivities(allSa);
       if (allExp.length) w.setExpenses(allExp);
 
-      return trips;
+      return combinedTrips;
     } catch {
       // fallback
     }

@@ -153,6 +153,36 @@ export const useWorldStore = create(
           .stops.filter((s) => s.trip_id === tripId)
           .sort((a, b) => a.order_index - b.order_index),
     }),
-    { name: 'yatraverse-world' },
+    {
+      name: 'yatraverse-world-v2',
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        const freshSeed = createSeed();
+        const existingTripIds = new Set((state.trips || []).map((t) => t.id));
+        freshSeed.trips.forEach((st) => {
+          if (!existingTripIds.has(st.id)) {
+            state.trips.push(st);
+          }
+        });
+        const existingStopIds = new Set((state.stops || []).map((s) => s.id));
+        freshSeed.stops.forEach((ss) => {
+          if (!existingStopIds.has(ss.id)) {
+            state.stops.push(ss);
+          }
+        });
+        const existingSaIds = new Set((state.stopActivities || []).map((sa) => sa.id));
+        freshSeed.stopActivities.forEach((sa) => {
+          if (!existingSaIds.has(sa.id)) {
+            state.stopActivities.push(sa);
+          }
+        });
+        const existingExpIds = new Set((state.expenses || []).map((e) => e.id));
+        freshSeed.expenses.forEach((e) => {
+          if (!existingExpIds.has(e.id)) {
+            state.expenses.push(e);
+          }
+        });
+      },
+    },
   ),
 );

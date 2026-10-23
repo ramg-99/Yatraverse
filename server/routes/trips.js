@@ -7,11 +7,21 @@ function slugify(text) {
 }
 function uid() { return Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4); }
 
-// GET /api/trips — user's own trips
+// GET /api/trips — user's own trips + public showcase trips
 router.get('/', auth, async (req, res, next) => {
   try {
+    const isUserAdmin = req.user.role === 'admin';
     const trips = await prisma.trip.findMany({
-      where: { userId: req.user.id },
+      where: isUserAdmin
+        ? {}
+        : {
+            OR: [
+              { userId: req.user.id },
+              { isPublic: true },
+              { userId: 'u_demo' },
+              { userId: 'u_aarav' },
+            ],
+          },
       include: {
         stops: {
           include: { city: true, stopActivities: { include: { activity: true }, orderBy: { orderIndex: 'asc' } } },

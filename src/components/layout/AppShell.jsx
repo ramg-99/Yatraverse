@@ -47,7 +47,7 @@ export function AppShell() {
       title: 'Navigation',
       items: [
         { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { to: '/trips', label: 'My Trips', icon: Briefcase, count: trips.length },
+        { to: '/trips', label: 'My Trips', icon: Briefcase },
         { to: '/trips/new', label: 'Plan New Trip', icon: PlusCircle },
       ],
     },
