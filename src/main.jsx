@@ -4,8 +4,30 @@ import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-d
 import { Toaster } from 'sonner';
 import './index.css';
 import './i18n/index.js';
+import { supabase } from '@/lib/supabase.js';
+import { useAuthStore } from '@/store/useAuthStore.js';
 import { AppShell } from '@/components/layout/AppShell.jsx';
 import { AdminRoute, GuestRoute, ProtectedRoute } from '@/app/guards.jsx';
+
+// Purge any legacy demo or JWT auth session on startup
+if (typeof window !== 'undefined') {
+  try {
+    localStorage.removeItem('yatraverse-auth');
+  } catch {}
+}
+
+// Keep app auth in sync with Supabase session state
+supabase.auth.getSession().then(({ data: { session } }) => {
+  if (!session) {
+    useAuthStore.getState().logout();
+  }
+});
+
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_OUT' || !session) {
+    useAuthStore.getState().logout();
+  }
+});
 import ActivitiesPage from '@/pages/ActivitiesPage.jsx';
 import CitiesPage from '@/pages/CitiesPage.jsx';
 import CreateTripPage from '@/pages/CreateTripPage.jsx';
