@@ -21,12 +21,14 @@ import { Button } from '@/components/ui/button.jsx';
 import { ConfirmDialog } from '@/components/ConfirmDialog.jsx';
 import { SkeletonPage } from '@/components/SkeletonBlock.jsx';
 
-const BarChart = lazy(() => import('recharts').then((m) => ({ default: m.BarChart })));
-const Bar = lazy(() => import('recharts').then((m) => ({ default: m.Bar })));
-const XAxis = lazy(() => import('recharts').then((m) => ({ default: m.XAxis })));
-const YAxis = lazy(() => import('recharts').then((m) => ({ default: m.YAxis })));
-const Tooltip = lazy(() => import('recharts').then((m) => ({ default: m.Tooltip })));
-const ResponsiveContainer = lazy(() => import('recharts').then((m) => ({ default: m.ResponsiveContainer })));
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 
 export default function AdminPage() {
   const [stats, setStats] = useState(null);

@@ -1,6 +1,6 @@
 import { useMemo, useState, lazy, Suspense } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { PieChart as PieIcon, BarChart3, AlertTriangle, CheckCircle2, ArrowRight, DollarSign, SlidersHorizontal, MapPin, Hotel } from 'lucide-react';
+import { PieChart as PieIcon, BarChart3, AlertTriangle, CheckCircle2, ArrowRight, DollarSign, SlidersHorizontal, MapPin, Hotel, Receipt } from 'lucide-react';
 import { useWorldStore } from '@/store/useWorldStore.js';
 import { useSettingsStore } from '@/store/useSettingsStore.js';
 import { spendFor, daysOf } from '@/lib/tripView.js';
@@ -12,15 +12,18 @@ import { Button } from '@/components/ui/button.jsx';
 import { SettleUpTab } from '@/components/collaboration/SettleUpTab.jsx';
 import { BookStaysModal } from '@/components/booking/BookStaysModal.jsx';
 
-const PieChart = lazy(() => import('recharts').then((m) => ({ default: m.PieChart })));
-const Pie = lazy(() => import('recharts').then((m) => ({ default: m.Pie })));
-const Cell = lazy(() => import('recharts').then((m) => ({ default: m.Cell })));
-const BarChart = lazy(() => import('recharts').then((m) => ({ default: m.BarChart })));
-const Bar = lazy(() => import('recharts').then((m) => ({ default: m.Bar })));
-const XAxis = lazy(() => import('recharts').then((m) => ({ default: m.XAxis })));
-const YAxis = lazy(() => import('recharts').then((m) => ({ default: m.YAxis })));
-const Tooltip = lazy(() => import('recharts').then((m) => ({ default: m.Tooltip })));
-const ResponsiveContainer = lazy(() => import('recharts').then((m) => ({ default: m.ResponsiveContainer })));
+import {
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
 
 const COLORS = ['#FFB02E', '#2DD4BF', '#FF6B6B', '#a78bfa'];
 
@@ -271,53 +274,65 @@ export default function TripBudgetPage() {
 
       {/* Interactive Recharts: Pie & Bar Charts */}
       <div className="glass rounded-3xl p-6 border border-border/50 shadow-md">
-        <h2 className="font-display text-xl font-bold text-parchment mb-4">Financial Visualizations</h2>
-        <Suspense fallback={<div className="h-64 animate-pulse rounded-2xl bg-white/5" />}>
-          <div className="grid gap-6 md:grid-cols-2">
-            <div>
-              <p className="text-xs font-mono text-muted mb-2 text-center">Category Breakdown (Pie Chart)</p>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={chartData}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius={55}
-                      outerRadius={85}
-                      paddingAngle={4}
-                    >
-                      {chartData.map((_, i) => (
-                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(val) => money(val, currency)}
-                      contentStyle={{ backgroundColor: '#0e1118', borderColor: '#242b3d', borderRadius: '12px' }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            <div>
-              <p className="text-xs font-mono text-muted mb-2 text-center">Category Expenses (Bar Chart)</p>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData}>
-                    <XAxis dataKey="name" stroke="#9aa3c7" fontSize={11} />
-                    <YAxis stroke="#9aa3c7" fontSize={11} />
-                    <Tooltip
-                      formatter={(val) => money(val, currency)}
-                      contentStyle={{ backgroundColor: '#0e1118', borderColor: '#242b3d', borderRadius: '12px' }}
-                    />
-                    <Bar dataKey="value" fill="#FFB02E" radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-display text-xl font-bold text-parchment">Financial Visualizations</h2>
+          <span className="text-[11px] font-mono text-muted uppercase tracking-wider">Live Visual Breakdown</span>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Pie Chart */}
+          <div className="flex flex-col items-center">
+            <p className="text-xs font-mono text-muted mb-2 text-center font-medium">Category Breakdown (Pie Chart)</p>
+            <div className="h-64 w-full min-h-[256px]">
+              <ResponsiveContainer width="100%" height={256}>
+                <PieChart>
+                  <Pie
+                    data={chartData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="45%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={4}
+                  >
+                    {chartData.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(val) => money(val, currency)}
+                    contentStyle={{ backgroundColor: '#0e1118', borderColor: '#242b3d', borderRadius: '12px', color: '#f5f5f7' }}
+                    itemStyle={{ color: '#f5f5f7' }}
+                  />
+                  <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
           </div>
-        </Suspense>
+
+          {/* Bar Chart */}
+          <div className="flex flex-col items-center">
+            <p className="text-xs font-mono text-muted mb-2 text-center font-medium">Category Expenses (Bar Chart)</p>
+            <div className="h-64 w-full min-h-[256px]">
+              <ResponsiveContainer width="100%" height={256}>
+                <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+                  <XAxis dataKey="name" stroke="#9aa3c7" fontSize={11} tickLine={false} />
+                  <YAxis stroke="#9aa3c7" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(val) => `${currency === 'INR' ? '₹' : '$'}${val >= 1000 ? `${Math.round(val / 1000)}k` : val}`} />
+                  <Tooltip
+                    formatter={(val) => money(val, currency)}
+                    contentStyle={{ backgroundColor: '#0e1118', borderColor: '#242b3d', borderRadius: '12px', color: '#f5f5f7' }}
+                    itemStyle={{ color: '#f5f5f7' }}
+                  />
+                  <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                    {chartData.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* City-by-City Budget Breakdown for Input Cities */}

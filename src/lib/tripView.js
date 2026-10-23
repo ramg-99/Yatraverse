@@ -3,20 +3,20 @@ import { useWorldStore } from '@/store/useWorldStore.js';
 
 export function codesFor(tripId) {
   const w = useWorldStore.getState();
-  return w.stops
-    .filter((s) => s.trip_id === tripId)
-    .sort((a, b) => a.order_index - b.order_index)
-    .map((s) => w.cities.find((c) => c.id === (s.city_id || s.cityId))?.iata)
+  return (w.stops || [])
+    .filter((s) => s.trip_id === tripId || s.tripId === tripId)
+    .sort((a, b) => (a.order_index ?? a.orderIndex ?? 0) - (b.order_index ?? b.orderIndex ?? 0))
+    .map((s) => (w.cities || []).find((c) => c.id === (s.city_id || s.cityId))?.iata)
     .filter(Boolean);
 }
 
 export function pointsFor(tripId) {
   const w = useWorldStore.getState();
-  return w.stops
-    .filter((s) => s.trip_id === tripId)
-    .sort((a, b) => a.order_index - b.order_index)
+  return (w.stops || [])
+    .filter((s) => s.trip_id === tripId || s.tripId === tripId)
+    .sort((a, b) => (a.order_index ?? a.orderIndex ?? 0) - (b.order_index ?? b.orderIndex ?? 0))
     .map((s) => {
-      const c = w.cities.find((x) => x.id === (s.city_id || s.cityId));
+      const c = (w.cities || []).find((x) => x.id === (s.city_id || s.cityId));
       return c ? { lat: c.lat, lng: c.lng, name: c.name } : null;
     })
     .filter(Boolean);
@@ -24,29 +24,30 @@ export function pointsFor(tripId) {
 
 export function spendFor(tripId) {
   const w = useWorldStore.getState();
-  const trip = w.trips.find((t) => t.id === tripId);
-  const tripStops = w.stops
-    .filter((s) => s.trip_id === tripId)
-    .sort((a, b) => a.order_index - b.order_index);
-  const exp = w.expenses.filter((e) => e.trip_id === tripId);
-  const acts = w.stopActivities.filter((sa) => tripStops.some((s) => s.id === sa.stop_id));
+  const trip = (w.trips || []).find((t) => t.id === tripId);
+  const tripStops = (w.stops || [])
+    .filter((s) => s.trip_id === tripId || s.tripId === tripId)
+    .sort((a, b) => (a.order_index ?? a.orderIndex ?? 0) - (b.order_index ?? b.orderIndex ?? 0));
+  const exp = (w.expenses || []).filter((e) => e.trip_id === tripId || e.tripId === tripId);
+  const acts = (w.stopActivities || []).filter((sa) => tripStops.some((s) => s.id === (sa.stop_id || sa.stopId)));
   
   const actCost = acts.reduce((sum, sa) => {
-    const a = w.activities.find((x) => x.id === sa.activity_id);
-    return sum + (sa.cost_override ?? a?.cost ?? 0);
+    const a = (w.activities || []).find((x) => x.id === (sa.activity_id || sa.activityId));
+    return sum + (sa.cost_override ?? sa.costOverride ?? a?.cost ?? 0);
   }, 0);
 
   // Category sums from explicit logged expenses
   const byCat = { transport: 0, stay: 0, activities: actCost, meals: 0 };
   exp.forEach((e) => {
-    byCat[e.category] = (byCat[e.category] || 0) + e.amount;
+    const cat = e.category || 'stay';
+    byCat[cat] = (byCat[cat] || 0) + (Number(e.amount) || 0);
   });
 
   // Calculate city-by-city baseline budget from input cities (stops)
   const cityBreakdown = tripStops.map((stop, idx) => {
-    const city = w.cities.find((c) => c.id === (stop.city_id || stop.cityId)) || stop.city;
-    const sStart = stop.start_date || stop.startDate || trip?.start_date;
-    const sEnd = stop.end_date || stop.endDate || trip?.end_date;
+    const city = (w.cities || []).find((c) => c.id === (stop.city_id || stop.cityId)) || stop.city;
+    const sStart = stop.start_date || stop.startDate || trip?.start_date || trip?.startDate;
+    const sEnd = stop.end_date || stop.endDate || trip?.end_date || trip?.endDate;
     let days = 2;
     if (sStart && sEnd) {
       try {
@@ -55,11 +56,11 @@ export function spendFor(tripId) {
         days = 2;
       }
     }
-    const costIdx = city?.cost_index || 3;
-    const cityActs = acts.filter((sa) => sa.stop_id === stop.id);
+    const costIdx = city?.cost_index || city?.costIndex || 3;
+    const cityActs = acts.filter((sa) => (sa.stop_id || sa.stopId) === stop.id);
     const cityActCost = cityActs.reduce((sum, sa) => {
-      const a = w.activities.find((x) => x.id === sa.activity_id);
-      return sum + (sa.cost_override ?? a?.cost ?? 0);
+      const a = (w.activities || []).find((x) => x.id === (sa.activity_id || sa.activityId));
+      return sum + (sa.cost_override ?? sa.costOverride ?? a?.cost ?? 0);
     }, 0);
 
     // Baseline daily estimates tailored to city cost index

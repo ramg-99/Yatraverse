@@ -18,7 +18,14 @@ export function CityCard({ city, saved, onSave, onAdd, onCompare, compared }) {
       <div className="p-4">
         <div className="flex items-start justify-between">
           <div>
-            <h3 className="font-display text-xl">{city.name}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-display text-xl">{city.name}</h3>
+              {city.distKm && (
+                <span className="rounded-full bg-saffron/15 text-saffron border border-saffron/30 px-2 py-0.5 font-mono text-[10px] font-bold">
+                  📍 {city.distKm.toLocaleString()} km
+                </span>
+              )}
+            </div>
             <p className="text-xs text-muted">
               {city.country} · {city.region} · {city.iata}
             </p>

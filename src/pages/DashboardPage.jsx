@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button.jsx';
 import { useCountUp } from '@/hooks/useCountUp.js';
 import { onImgError } from '@/lib/image.js';
 import { YatraAiSymbol } from '@/components/ai/YatraAiSymbol.jsx';
+import { NearMeRecommendations } from '@/components/discovery/NearMeRecommendations.jsx';
 
 const TripMap = lazy(() => import('@/components/map/TripMap.jsx').then((m) => ({ default: m.TripMap })));
 
@@ -408,6 +409,9 @@ export default function DashboardPage() {
           })}
         </div>
       </section>
+
+      {/* Location-Based Nearby Trips & Weekend Escapes */}
+      <NearMeRecommendations />
 
       {/* 6. Explore Curated Destinations with Categories */}
       <section className="space-y-4">

@@ -20,13 +20,16 @@ import { calculateMemberBalances, calculateSettlementTransfers } from '@/lib/set
 import { money } from '@/lib/utils.js';
 import { onImgError } from '@/lib/image.js';
 import { LogExpenseModal } from './LogExpenseModal.jsx';
+import { GroupInviteModal } from './GroupInviteModal.jsx';
 
 export function SettleUpTab({ tripId }) {
   const world = useWorldStore();
+  const trip = world.trips.find((t) => t.id === tripId);
   const currentUser = useAuthStore((s) => s.user);
   const currentUserId = currentUser?.id || 'u_demo';
 
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
 
   // Group members for this trip
   const tripMembers = useMemo(() => {
@@ -171,6 +174,16 @@ export function SettleUpTab({ tripId }) {
               Settle All ({transfers.length})
             </Button>
           )}
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setIsInviteOpen(true)}
+            className="border-saffron/50 text-saffron hover:bg-saffron/10 font-bold"
+          >
+            <Users className="mr-1.5 h-3.5 w-3.5" />
+            Crew ({tripMembers.length})
+          </Button>
 
           <Button
             size="sm"
@@ -408,6 +421,13 @@ export function SettleUpTab({ tripId }) {
         isOpen={isLogModalOpen}
         onClose={() => setIsLogModalOpen(false)}
         tripId={tripId}
+      />
+
+      {/* Group Invite & Crew Modal */}
+      <GroupInviteModal
+        isOpen={isInviteOpen}
+        onClose={() => setIsInviteOpen(false)}
+        trip={trip}
       />
     </div>
   );

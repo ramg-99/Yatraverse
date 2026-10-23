@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Search, MapPin, Heart, PlusCircle, Scale, Check, Calendar, ArrowRight, X } from 'lucide-react';
+import { Search, MapPin, Heart, PlusCircle, Scale, Check, Calendar, ArrowRight, X, Navigation } from 'lucide-react';
 import { listCities, toggleSaved } from '@/services/catalog.js';
 import { addStop } from '@/services/trips.js';
 import { useAuthStore } from '@/store/useAuthStore.js';
 import { useWorldStore } from '@/store/useWorldStore.js';
 import { useSettingsStore } from '@/store/useSettingsStore.js';
+import { haversineDistance } from '@/lib/paceCalculator.js';
 import { CityCard } from '@/components/trip/CityCard.jsx';
 import { SkeletonPage, ErrorState } from '@/components/SkeletonBlock.jsx';
 import { Button } from '@/components/ui/button.jsx';
@@ -22,6 +23,7 @@ export default function CitiesPage() {
   const [targetTripId, setTargetTripId] = useState('');
   const [stopStart, setStopStart] = useState('2027-03-01');
   const [stopEnd, setStopEnd] = useState('2027-03-05');
+  const [userCoords, setUserCoords] = useState(null);
 
   const user = useAuthStore((s) => s.user) || { id: 'u_demo' };
   const world = useWorldStore();
@@ -46,6 +48,20 @@ export default function CitiesPage() {
   };
   useEffect(load, []);
 
+  const handleSelectRegion = (r) => {
+    setRegion(r);
+    if (r === '📍 Near Me' && !userCoords) {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          () => setUserCoords({ lat: 19.076, lng: 72.877 }) // default Mumbai GPS hub
+        );
+      } else {
+        setUserCoords({ lat: 19.076, lng: 72.877 });
+      }
+    }
+  };
+
   useEffect(() => {
     if (mine.length > 0 && !targetTripId) {
       setTargetTripId(mine[0].id);
@@ -55,12 +71,25 @@ export default function CitiesPage() {
   }, [mine, targetTripId]);
 
   const filtered = useMemo(() => {
-    return rows.filter((c) => {
-      const match = `${c.name} ${c.country} ${c.region}`.toLowerCase().includes(debounced.toLowerCase());
-      const reg = region === 'All' || c.region === region;
-      return match && reg;
-    });
-  }, [rows, debounced, region]);
+    const isNearMe = region === '📍 Near Me';
+    const origin = userCoords || { lat: 19.076, lng: 72.877 };
+
+    let list = rows
+      .map((c) => {
+        const distKm = Math.round(haversineDistance(origin.lat, origin.lng, c.lat, c.lng));
+        return { ...c, distKm };
+      })
+      .filter((c) => {
+        const match = `${c.name} ${c.country} ${c.region}`.toLowerCase().includes(debounced.toLowerCase());
+        const reg = region === 'All' || isNearMe || c.region === region;
+        return match && reg;
+      });
+
+    if (isNearMe) {
+      list = [...list].sort((a, b) => a.distKm - b.distKm);
+    }
+    return list;
+  }, [rows, debounced, region, userCoords]);
 
   const isSaved = (id) => world.savedDestinations.some((s) => s.user_id === user.id && s.city_id === id);
   const compared = world.cities.filter((c) => compareIds.includes(c.id));
@@ -112,16 +141,16 @@ export default function CitiesPage() {
           />
         </div>
 
-        {/* Region Filters */}
+        {/* Region & Proximity Filters */}
         <div className="flex flex-wrap gap-1 rounded-xl border border-border/50 bg-white/5 p-1">
-          {['All', 'Asia', 'Europe', 'Americas', 'Africa', 'Oceania'].map((r) => (
+          {['All', 'Asia', 'Europe', 'Americas', 'Africa', 'Oceania', '📍 Near Me'].map((r) => (
             <button
               key={r}
               type="button"
-              onClick={() => setRegion(r)}
-              className={`rounded-lg px-3 py-1 text-xs transition-colors ${
+              onClick={() => handleSelectRegion(r)}
+              className={`rounded-lg px-3 py-1 text-xs transition-colors cursor-pointer ${
                 region === r
-                  ? 'bg-saffron text-ink font-semibold'
+                  ? 'bg-saffron text-slate-950 font-bold shadow-xs'
                   : 'text-muted hover:text-parchment'
               }`}
             >

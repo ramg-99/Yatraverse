@@ -413,131 +413,147 @@ export default function TripTimelinePage() {
           </div>
 
           {/* Calendar Grid */}
-          <div>
-            <div className="grid grid-cols-7 gap-2 mb-2">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
-                <p key={d} className="text-center font-mono text-xs font-semibold text-muted py-1">
-                  {d}
-                </p>
-              ))}
-            </div>
-            <div className="grid grid-cols-7 gap-2">
-              {monthDays.map((d) => {
-                const iso = format(d, 'yyyy-MM-dd');
-                const stop = stops.find((s) => {
-                  const sStart = s.start_date || s.startDate;
-                  const sEnd = s.end_date || s.endDate;
-                  return iso >= sStart && iso <= sEnd;
-                });
-                const stopIndex = stop ? stops.indexOf(stop) : -1;
-                const color = stopIndex >= 0 ? COLORS[stopIndex % COLORS.length] : undefined;
-                const city = stop ? (world.cities.find((c) => c.id === (stop.city_id || stop.cityId)) || stop.city) : null;
-                const acts = world.stopActivities.filter((sa) => sa.day_date === iso);
-                const dayIndex = days.findIndex((day) => format(day, 'yyyy-MM-dd') === iso);
-                const isTripDay = dayIndex >= 0;
+          <div className="overflow-x-auto pb-2 -mx-1 sm:mx-0">
+            <div className="min-w-[720px]">
+              <div className="grid grid-cols-7 gap-2 mb-2">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+                  <p key={d} className="text-center font-mono text-xs font-semibold text-muted py-1">
+                    {d}
+                  </p>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-2">
+                {monthDays.map((d) => {
+                  const iso = format(d, 'yyyy-MM-dd');
+                  const stop = stops.find((s) => {
+                    const sStart = s.start_date || s.startDate;
+                    const sEnd = s.end_date || s.endDate;
+                    return iso >= sStart && iso <= sEnd;
+                  });
+                  const stopIndex = stop ? stops.indexOf(stop) : -1;
+                  const color = stopIndex >= 0 ? COLORS[stopIndex % COLORS.length] : undefined;
+                  const city = stop ? (world.cities.find((c) => c.id === (stop.city_id || stop.cityId)) || stop.city) : null;
+                  const acts = world.stopActivities.filter((sa) => sa.day_date === iso);
+                  const dayIndex = days.findIndex((day) => format(day, 'yyyy-MM-dd') === iso);
+                  const isTripDay = dayIndex >= 0;
 
-                return (
-                  <div
-                    key={iso}
-                    className={`min-h-32 rounded-2xl border p-2.5 flex flex-col justify-between transition-all ${
-                      isTripDay
-                        ? 'bg-white/5 shadow-sm hover:bg-white/[0.08]'
-                        : 'border-border/20 opacity-30 bg-black/20'
-                    }`}
-                    style={{
-                      borderColor: color ? `${color}80` : undefined,
-                      borderTop: color ? `3px solid ${color}` : undefined,
-                    }}
-                  >
-                    <div>
-                      {/* Day Header */}
-                      <div className="flex items-center justify-between">
-                        <span
-                          className="font-mono text-xs font-bold"
-                          style={{ color: color || '#9aa3c7' }}
-                        >
-                          {format(d, 'd')}
-                        </span>
-                        {isTripDay && (
-                          <span className="font-mono text-[10px] px-1.5 py-0.2 rounded-full bg-saffron/20 text-saffron font-semibold">
-                            Day {dayIndex + 1}
+                  return (
+                    <div
+                      key={iso}
+                      className={`min-h-[150px] rounded-2xl border p-2 flex flex-col justify-between transition-all overflow-hidden relative ${
+                        isTripDay
+                          ? 'bg-white/5 shadow-sm hover:bg-white/[0.08]'
+                          : 'border-border/20 opacity-30 bg-black/20'
+                      }`}
+                      style={{
+                        borderColor: color ? `${color}80` : undefined,
+                        borderTop: color ? `3px solid ${color}` : undefined,
+                      }}
+                    >
+                      <div className="min-w-0 w-full">
+                        {/* Day Header */}
+                        <div className="flex items-center justify-between mb-1">
+                          <span
+                            className="font-mono text-xs font-bold"
+                            style={{ color: color || '#9aa3c7' }}
+                          >
+                            {format(d, 'd')}
                           </span>
+                          {isTripDay && (
+                            <span className="font-mono text-[9px] px-1.5 py-0.2 rounded-full bg-saffron/20 text-saffron font-bold">
+                              Day {dayIndex + 1}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* City Highlight */}
+                        {city && (
+                          <div
+                            className="mb-1.5 flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold truncate w-full"
+                            style={{
+                              backgroundColor: `${color}25`,
+                              color: color,
+                            }}
+                            title={`${city.name} (${city.country || ''})`}
+                          >
+                            <MapPin className="h-2.5 w-2.5 shrink-0" />
+                            <span className="truncate">{city.name}</span>
+                          </div>
                         )}
-                      </div>
 
-                      {/* City Highlight & Weather/Pace Badges */}
-                      {city && (
-                        <div
-                          className="mt-1.5 flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold truncate"
-                          style={{
-                            backgroundColor: `${color}25`,
-                            color: color,
-                          }}
-                          title={`${city.name} (${city.country || ''})`}
-                        >
-                          <MapPin className="h-3 w-3 shrink-0" />
-                          <span className="truncate">{city.name}</span>
-                        </div>
-                      )}
+                        {/* Weather and Pace Indicators (Compact Micro Chips) */}
+                        {isTripDay && (
+                          <div className="mb-1.5 flex items-center justify-between gap-1 min-w-0 w-full overflow-hidden">
+                            <WeatherBadge
+                              compact
+                              city={city}
+                              dateIso={iso}
+                              dayIndex={dayIndex}
+                              outdoorCount={acts.filter((sa) => world.activities.find((a) => a.id === sa.activity_id)?.is_outdoor !== false).length}
+                              onFixDay={(weather) =>
+                                setWeatherModalData({
+                                  dateIso: iso,
+                                  dayIndex,
+                                  weather,
+                                  city,
+                                  outdoorActs: acts.filter((sa) => world.activities.find((a) => a.id === sa.activity_id)?.is_outdoor !== false),
+                                  sunnyDays: days
+                                    .map((dItem, dIdx) => ({ iso: format(dItem, 'yyyy-MM-dd'), dayIndex: dIdx }))
+                                    .filter((dItem) => dItem.iso !== iso),
+                                })
+                              }
+                            />
+                            <PaceMeterBadge
+                              compact
+                              pace={calculateDayPace(acts, world.activities, city)}
+                              onRebalance={() => setIsPaceModalOpen(true)}
+                            />
+                          </div>
+                        )}
 
-                      {/* Weather and Pace Indicators for Trip Days */}
-                      {isTripDay && (
-                        <div className="mt-1 flex items-center justify-between gap-1">
-                          <WeatherBadge
-                            city={city}
-                            dateIso={iso}
-                            dayIndex={dayIndex}
-                            outdoorCount={acts.filter((sa) => world.activities.find((a) => a.id === sa.activity_id)?.is_outdoor !== false).length}
-                            onFixDay={(weather) =>
-                              setWeatherModalData({
-                                dateIso: iso,
-                                dayIndex,
-                                weather,
-                                city,
-                                outdoorActs: acts.filter((sa) => world.activities.find((a) => a.id === sa.activity_id)?.is_outdoor !== false),
-                                sunnyDays: days
-                                  .map((dItem, dIdx) => ({ iso: format(dItem, 'yyyy-MM-dd'), dayIndex: dIdx }))
-                                  .filter((dItem) => dItem.iso !== iso),
-                              })
-                            }
-                          />
-                          <PaceMeterBadge pace={calculateDayPace(acts, world.activities, city)} />
-                        </div>
-                      )}
-
-                      {/* Activities for this day */}
-                      <div className="mt-2 space-y-1">
-                        {acts.slice(0, 2).map((sa) => {
-                          const act = world.activities.find((a) => a.id === sa.activity_id);
-                          const isOutdoor = act?.is_outdoor !== false;
-                          return (
-                            <p
-                              key={sa.id}
-                              onClick={() => setEditItem({ ...sa, actName: act?.name })}
-                              className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[10px] text-parchment truncate cursor-pointer hover:bg-white/20 transition-colors flex items-center gap-1"
-                              title="Click to edit activity"
+                        {/* Activities for this day */}
+                        <div className="space-y-1 min-w-0 w-full">
+                          {acts.slice(0, 2).map((sa) => {
+                            const act = world.activities.find((a) => a.id === sa.activity_id);
+                            const isOutdoor = act?.is_outdoor !== false;
+                            return (
+                              <div
+                                key={sa.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditItem({ ...sa, actName: act?.name });
+                                }}
+                                className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[9px] text-parchment truncate cursor-pointer hover:bg-white/20 transition-colors flex items-center gap-1 min-w-0 w-full"
+                                title={`${sa.start_time} · ${act?.name || 'Activity'} (Click to edit)`}
+                              >
+                                <span className="shrink-0">{isOutdoor ? '🌲' : '🏛️'}</span>
+                                <span className="text-saffron font-bold shrink-0">{sa.start_time}</span>
+                                <span className="truncate min-w-0">{act?.name}</span>
+                              </div>
+                            );
+                          })}
+                          {acts.length > 2 && (
+                            <button
+                              type="button"
+                              onClick={() => handleSetView('timeline')}
+                              className="text-[9px] text-aurora font-mono font-medium hover:underline text-left block w-full truncate"
+                              title="View all activities in Timeline view"
                             >
-                              <span>{isOutdoor ? '🌲' : '🏛️'}</span>
-                              <span className="text-saffron font-bold">{sa.start_time}</span> · {act?.name}
-                            </p>
-                          );
-                        })}
-                        {acts.length > 2 && (
-                          <p className="text-[10px] text-aurora font-mono font-medium pl-1">
-                            +{acts.length - 2} more activities
-                          </p>
-                        )}
+                              +{acts.length - 2} more →
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
 
-                    {isTripDay && acts.length === 0 && (
-                      <p className="text-[10px] text-muted italic mt-1">
-                        Explore {city?.name || 'city'}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
+                      {isTripDay && acts.length === 0 && (
+                        <p className="text-[10px] text-muted italic mt-1 truncate">
+                          Explore {city?.name || 'city'}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>

@@ -14,6 +14,7 @@ import {
   DollarSign,
   CloudSun,
   ChevronDown,
+  Users,
 } from 'lucide-react';
 import { useWorldStore } from '@/store/useWorldStore.js';
 import { useAuthStore } from '@/store/useAuthStore.js';
@@ -25,6 +26,7 @@ import { pointsFor, spendFor } from '@/lib/tripView.js';
 import { TripPaceOverview } from '@/components/timeline/TripPaceOverview.jsx';
 import { PaceRebalanceModal } from '@/components/timeline/PaceRebalanceModal.jsx';
 import { calculateTripPaceOverview } from '@/lib/paceCalculator.js';
+import { GroupInviteModal } from '@/components/collaboration/GroupInviteModal.jsx';
 
 const TripMap = lazy(() => import('@/components/map/TripMap.jsx').then((m) => ({ default: m.TripMap })));
 
@@ -38,6 +40,13 @@ export default function TripViewPage() {
 
   const [mode, setMode] = useState('list');
   const [isPaceModalOpen, setIsPaceModalOpen] = useState(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+
+  const tripMembers = useMemo(
+    () => (world.tripMembers || []).filter((m) => m.trip_id === trip?.id),
+    [world.tripMembers, trip?.id]
+  );
+
   const stops = useMemo(
     () => (trip ? world.stops.filter((s) => s.trip_id === trip.id).sort((a, b) => a.order_index - b.order_index) : []),
     [trip, world.stops]
@@ -177,6 +186,15 @@ export default function TripViewPage() {
               <Calendar className="h-3.5 w-3.5" /> Calendar
             </button>
           </div>
+
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-saffron/50 text-saffron hover:bg-saffron/10 font-bold"
+            onClick={() => setIsInviteModalOpen(true)}
+          >
+            <Users className="mr-1.5 h-3.5 w-3.5" /> Crew ({tripMembers.length})
+          </Button>
 
           <Link to={`/trips/${trip.id}/build`}>
             <Button size="sm" variant="outline">
@@ -351,69 +369,71 @@ export default function TripViewPage() {
                 })}
               </div>
 
-              <div>
-                <div className="grid grid-cols-7 gap-2 mb-2">
-                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
-                    <p key={d} className="text-center font-mono text-xs font-semibold text-muted py-1">
-                      {d}
-                    </p>
-                  ))}
-                </div>
-                <div className="grid grid-cols-7 gap-2">
-                  {Array.from({ length: days[0]?.d.getDay() || 0 }).map((_, i) => (
-                    <div key={`blank-${i}`} className="min-h-28 rounded-2xl border border-dashed border-border/20 p-2 opacity-30 bg-black/10" />
-                  ))}
-                  {days.map((day) => (
-                    <div
-                      key={day.iso}
-                      className="min-h-28 rounded-2xl border p-2 flex flex-col justify-between bg-white/5 hover:bg-white/10 transition-all shadow-sm"
-                      style={{
-                        borderColor: `${day.color}70`,
-                        borderTop: `3px solid ${day.color}`,
-                      }}
-                    >
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <span className="font-mono text-xs font-bold" style={{ color: day.color }}>
-                            {format(day.d, 'dd')}
-                          </span>
-                          <span className="font-mono text-[9px] px-1.5 py-0.2 rounded-full bg-saffron/20 text-saffron font-bold">
-                            D{day.dayNum}
-                          </span>
-                        </div>
-
-                        {day.city && (
-                          <div
-                            className="mt-1 flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold truncate"
-                            style={{
-                              backgroundColor: `${day.color}25`,
-                              color: day.color,
-                            }}
-                            title={`${day.city.name} (${day.city.country || ''})`}
-                          >
-                            <MapPin className="h-2.5 w-2.5 shrink-0" />
-                            <span className="truncate">{day.city.name}</span>
+              <div className="overflow-x-auto pb-2 -mx-1 sm:mx-0">
+                <div className="min-w-[680px]">
+                  <div className="grid grid-cols-7 gap-2 mb-2">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+                      <p key={d} className="text-center font-mono text-xs font-semibold text-muted py-1">
+                        {d}
+                      </p>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-7 gap-2">
+                    {Array.from({ length: days[0]?.d.getDay() || 0 }).map((_, i) => (
+                      <div key={`blank-${i}`} className="min-h-[130px] rounded-2xl border border-dashed border-border/20 p-2 opacity-30 bg-black/10" />
+                    ))}
+                    {days.map((day) => (
+                      <div
+                        key={day.iso}
+                        className="min-h-[130px] rounded-2xl border p-2 flex flex-col justify-between bg-white/5 hover:bg-white/10 transition-all shadow-sm overflow-hidden"
+                        style={{
+                          borderColor: `${day.color}70`,
+                          borderTop: `3px solid ${day.color}`,
+                        }}
+                      >
+                        <div className="min-w-0 w-full">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-mono text-xs font-bold" style={{ color: day.color }}>
+                              {format(day.d, 'dd')}
+                            </span>
+                            <span className="font-mono text-[9px] px-1.5 py-0.2 rounded-full bg-saffron/20 text-saffron font-bold">
+                              D{day.dayNum}
+                            </span>
                           </div>
-                        )}
 
-                        <div className="mt-1.5 space-y-1">
-                          {day.acts.slice(0, 2).map(({ sa, act }) => (
-                            <div key={sa.id} className="rounded bg-white/10 p-1 text-[9px] leading-tight">
-                              <p className="font-medium text-parchment truncate">{act?.name}</p>
-                              <p className="text-muted">{sa.start_time} · {money(sa.cost_override ?? act?.cost ?? 0)}</p>
+                          {day.city && (
+                            <div
+                              className="mb-1.5 flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold truncate w-full"
+                              style={{
+                                backgroundColor: `${day.color}25`,
+                                color: day.color,
+                              }}
+                              title={`${day.city.name} (${day.city.country || ''})`}
+                            >
+                              <MapPin className="h-2.5 w-2.5 shrink-0" />
+                              <span className="truncate">{day.city.name}</span>
                             </div>
-                          ))}
-                          {day.acts.length > 2 && (
-                            <p className="text-[9px] text-aurora font-mono">+{day.acts.length - 2} more</p>
                           )}
-                        </div>
-                      </div>
 
-                      {day.acts.length === 0 && (
-                        <p className="text-[9px] text-muted italic">Explore {day.city?.name || 'city'}</p>
-                      )}
-                    </div>
-                  ))}
+                          <div className="space-y-1 min-w-0 w-full">
+                            {day.acts.slice(0, 2).map(({ sa, act }) => (
+                              <div key={sa.id} className="rounded bg-white/10 p-1 text-[9px] leading-tight min-w-0">
+                                <p className="font-medium text-parchment truncate">{act?.name}</p>
+                                <p className="text-muted truncate">{sa.start_time} · {money(sa.cost_override ?? act?.cost ?? 0)}</p>
+                              </div>
+                            ))}
+                            {day.acts.length > 2 && (
+                              <p className="text-[9px] text-aurora font-mono">+{day.acts.length - 2} more</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {day.acts.length === 0 && (
+                          <p className="text-[9px] text-muted italic truncate">Explore {day.city?.name || 'city'}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -464,6 +484,13 @@ export default function TripViewPage() {
         isOpen={isPaceModalOpen}
         onClose={() => setIsPaceModalOpen(false)}
         overview={paceOverview}
+        trip={trip}
+      />
+
+      {/* Group Invite & Crew Modal */}
+      <GroupInviteModal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
         trip={trip}
       />
     </div>
